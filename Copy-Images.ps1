@@ -94,6 +94,20 @@ function Get-ImageFiles()
     end {}
 }
 
+function Get-ItemsOlderThan()
+{
+[CmdletBinding()] 
+    Param(
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipeline = $True)]
+        [ValidateScript( { ($_ -gt 0) })]
+        [int]$Days,
+        [ValidateScript( { ((Get-Item $_) -is [System.IO.DirectoryInfo]) -and (Test-Path -Path $_) })]
+        [String]$Path
+    )
+
+    $limit = (Get-Date).AddDays(-$Days)
+    Get-ChildItem -Path $Path -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } 
+}
 function Copy-Images()
 {
     [CmdletBinding()] 
@@ -132,6 +146,8 @@ $From = "$env:USERPROFILE\AppData\Local\Packages\Microsoft.Windows.ContentDelive
 $To = "$env:USERPROFILE\Pictures\Windows Spotlight"
 
 Copy-Images -Source $From -Destination $To -NewExtension "jpg" -FilterWidth 1920 -Verbose
+
+Get-ItemsOlderThan -Days 15 -Path $To | Remove-Item -WhatIf
 
 # Access denied :(
 #Get-ImageFile -path $To -FilterWidth 1080 | Select-Object Name,Width,Height
