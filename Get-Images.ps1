@@ -144,7 +144,7 @@ function Get-Images
 
 } # function
 
-$Images = Get-Images -Source "C:\Users\mattiassich\Pictures\Windows Spotlight"  
+$Images = Get-Images -Source "$env:USERPROFILE\Pictures\Windows Spotlight"  
 $Images | Select-Object Name,Width,Height |
     Format-Table
     #Where-Object {$_.Width -eq 1080} |  
