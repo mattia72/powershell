@@ -23,7 +23,7 @@ function Copy-NewerItem
         {
             if ($Source.LastWriteTime -eq $Destination.LastWriteTime)
             {
-                Write-Verbose "${Destination.Name} is the same."
+                Write-Verbose "${Destination.Name} has the same WriteTime."
             }
             else 
             {
