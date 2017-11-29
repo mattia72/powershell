@@ -64,29 +64,30 @@ function Get-ImageFiles()
             }
         }
 
-        foreach ($fi in $Files)
-        {
-            if ($fi.Exists)
-            {
-                if ($FilterExtension -ne "" -and $FilterExtension -ne $fi.Extension)
-                {
+        foreach ($fi in $Files) {
+            if ($fi.Exists) {
+                if ($FilterExtension -ne "" -and $FilterExtension -ne $fi.Extension) {
                     continue;
                 }
 
-                $img = [System.Drawing.Image]::FromFile($fi.FullName)
-                if ($FilterWidth -ne 0 -and $FilterWidth -ne $img.Width)
-                {
+                try {
+                    $img = [System.Drawing.Image]::FromFile($fi.FullName)
+                }
+                catch {
+                    Write-Error "Couldn't make image from $($fi.FullName)" 
                     continue;
                 }
-                if ($FilterHeight -ne 0 -and $FilterHeight -ne $img.Height)
-                {
+
+                if ($FilterWidth -ne 0 -and $FilterWidth -ne $img.Width) {
+                    continue;
+                }
+                if ($FilterHeight -ne 0 -and $FilterHeight -ne $img.Height) {
                     continue;
                 }
 
                 Create-FileImageObject -File $fi
             }
-            else
-            {
+            else {
                 Write-Error "File not found: $Path" 
             }   
         }
@@ -145,9 +146,13 @@ function Copy-Images()
 $From = "$env:USERPROFILE\AppData\Local\Packages\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\LocalState\Assets"
 $To = "$env:USERPROFILE\Pictures\Windows Spotlight"
 
+if (!(Test-Path -Path $To)) {
+    New-Item -ItemType Directory -Force -Path $To
+}
+
 Copy-Images -Source $From -Destination $To -NewExtension "jpg" -FilterWidth 1920 -Verbose
 
-Get-ItemsOlderThan -Days 30 -Path $To | Remove-Item -Verbose
+Get-ItemsOlderThan -Days 30 -Path $To | Remove-Item 
 
 # Access denied :(
 #Get-ImageFile -path $To -FilterWidth 1080 | Select-Object Name,Width,Height
