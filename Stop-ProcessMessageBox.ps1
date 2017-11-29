@@ -15,7 +15,7 @@
         General notes
 #>
 
-. ./Show-MessageBox
+Import-Module $PSScriptRoot\Show-MessageBox
 
 function Stop-ProcessMessageBox 
 {
