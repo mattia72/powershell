@@ -86,6 +86,6 @@ function Get-Web {
    }
    $res.Close();
    if($fileName) {
-      ls $fileName
+      Get-ChildItem $fileName
    }
 }
