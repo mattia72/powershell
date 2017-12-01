@@ -2,16 +2,14 @@ Clear-Host
  
 $searcher = New-Object System.DirectoryServices.DirectorySearcher([ADSI]'')
  
-While (!$result)
-{
-$UserName = Read-Host 'Username to check : '
-if (!$UserName)
-{
-Write-Host "No Username Entered"
-exit
-}
-$searcher.Filter = "(&(objectClass=User)(samAccountName=" + $username + "))"
-$result = $searcher.Findone()
+While (!$result) {
+    $UserName = Read-Host 'Username'
+    if (!$UserName) {
+        Write-Host "No Username Entered"
+        exit
+    }
+    $searcher.Filter = "(&(objectClass=User)(samAccountName=" + $username + "))"
+    $result = $searcher.Findone()
 }
 # get domain password policy (max pw age)
 $D = [System.DirectoryServices.ActiveDirectory.Domain]::GetCurrentDomain()
@@ -25,10 +23,10 @@ $MinPwdLength = $Domain.minPwdLength
 $PwdHistory = $Domain.pwdHistoryLength
  
 # Convert to days.
-$MaxPwdAge = -$lngMaxPwdAge/(600000000 * 1440)
-$MinPwdAge = -$lngMinPwdAge/(600000000 * 1440)
+$MaxPwdAge = - $lngMaxPwdAge / (600000000 * 1440)
+$MinPwdAge = - $lngMinPwdAge / (600000000 * 1440)
  
-$lngPwdLastSet =$result.Properties.pwdlastset
+$lngPwdLastSet = $result.Properties.pwdlastset
 $pwdLastSet = [datetime]::FromFileTime($lngPwdLastSet[0])
  
 Write-Host $result.Path
@@ -38,5 +36,5 @@ Write-Host "Max Password Age : " $MaxPwdAge
 Write-Host "Min Password Age : " $MinPwdAge
 Write-Host "Password History : " $PwdHistory
 Write-Host "Min Password Length : " $MinPwdLength
-if ($pwdLastSet -ge (Get-Date).AddDays(-$MinPwdAge)){Write-Host -ForegroundColor Red "Password can not be changed - Min Age"}
-if ($pwdLastSet -ge (Get-Date).AddDays($MaxPwdAge)){Write-Host -ForegroundColor Red "Password Expired"}
+if ($pwdLastSet -ge (Get-Date).AddDays( - $MinPwdAge)) {Write-Host -ForegroundColor Red "Password can not be changed - Min Age"}
+if ($pwdLastSet -ge (Get-Date).AddDays($MaxPwdAge)) {Write-Host -ForegroundColor Red "Password Expired"}
