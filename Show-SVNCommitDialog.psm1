@@ -2,7 +2,7 @@ $TortoisProcPath = "C:\Program Files\TortoiseSVN\bin\TortoiseProc.exe"
 
 Import-Module $PSScriptRoot\Show-MessageBox
 
-function Push-ToSVN
+function Show-SVNCommitDialog
 {
     <#
     .SYNOPSIS
@@ -21,7 +21,7 @@ function Push-ToSVN
     If there is no change to commit, then a msgbox will be shown
     
     .EXAMPLE
-    @("full\path1", "full\path2") | Push-ToSVN  
+    @("full\path1", "full\path2") | Show-SVNCommitDialog  
     
     .NOTES
     v1.0 Initial version
@@ -85,4 +85,4 @@ function Test-Modified ($path)
     return $changedFiles -ne $null
 }
 
-Export-ModuleMember -Function Push-ToSVN, Test-ModifiePushTo
+Export-ModuleMember -Function Show-SVNCommitDialog, Test-ModifiePushTo
