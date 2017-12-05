@@ -55,7 +55,7 @@ function Show-SVNCommitDialog
                 }
                 elseif ($ShowNoChangeMsgBox)
                 {
-                    Show-MessageBox -Msg "$path has no changes." -Title "SVN status" -Information
+                    Show-MessageBox -Msg "$path has no changes." -Title "SVN status" -Information | Out-Null
                 }
             }
             else
@@ -80,9 +80,11 @@ function Show-SVNCommitDialog
 
 function Test-Modified ($path)
 {
-    cd $path
+    Push-Location
+    Set-Location $path
     $changedFiles = svn status -q
+    Pop-Location
     return $changedFiles -ne $null
 }
 
-Export-ModuleMember -Function Show-SVNCommitDialog, Test-ModifiePushTo
+Export-ModuleMember -Function Show-SVNCommitDialog, Test-Modified
