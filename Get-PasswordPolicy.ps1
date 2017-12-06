@@ -2,8 +2,6 @@
 
 Clear-Host
  
-$searcher = New-Object System.DirectoryServices.DirectorySearcher([ADSI]'')
- 
 While (!$user)
 {
     $UserName = $env:USERNAME 
