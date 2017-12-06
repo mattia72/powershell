@@ -1,26 +1,26 @@
 function Set-FileTime{
     param(
-      [string[]]$paths,
-      [bool]$only_modification = $false,
-      [bool]$only_access = $false
+      [string[]]$Paths,
+      [bool]$ModificationOnly = $false,
+      [bool]$AccessOnly = $false,
+      [DateTime]$DateTime = $(Get-Date)
     );
   
     begin {
       function updateFileSystemInfo([System.IO.FileSystemInfo]$fsInfo) {
-        $datetime = get-date
-        if ( $only_access )
+        if ( $AccessOnly )
         {
-           $fsInfo.LastAccessTime = $datetime
+           $fsInfo.LastAccessTime = $DateTime
         }
-        elseif ( $only_modification )
+        elseif ( $ModificationOnly )
         {
-           $fsInfo.LastWriteTime = $datetime
+           $fsInfo.LastWriteTime = $DateTime
         }
         else
         {
-           $fsInfo.CreationTime = $datetime
-           $fsInfo.LastWriteTime = $datetime
-           $fsInfo.LastAccessTime = $datetime
+           $fsInfo.CreationTime = $DateTime
+           $fsInfo.LastWriteTime = $DateTime
+           $fsInfo.LastAccessTime = $DateTime
          }
       }
      
@@ -60,8 +60,8 @@ function Set-FileTime{
     }
    
     end {
-      if ($paths) {
-        foreach ($path in $paths) {
+      if ($Paths) {
+        foreach ($path in $Paths) {
           if (test-path $path) {
             touchExistingFile($path)
           }
