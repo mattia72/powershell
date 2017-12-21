@@ -44,8 +44,9 @@ Write-Host "Password History    : " $PwdHistory
 Write-Host "Min Password Length : " $MinPwdLength
 
 
-if ($pwdLastSet -ge (Get-Date).AddDays( - $MinPwdAge)) {
-    Write-Host -ForegroundColor Red "Password can not be changed, it is only $($pwdLastSetDays.Days) days old!"
+if ($pwdLastSet.AddDays($MinPwdAge) -gt (Get-Date)) {
+    Write-Host -ForegroundColor Red "Password can not be changed, it is only $(-$pwdLastSetDays.Days) days old!"
+    Write-Host -ForegroundColor Red "You can change it at $($pwdLastSet.AddDays($MinPwdAge))"
 }
 if ($pwdLastSet -ge (Get-Date).AddDays($MaxPwdAge)) {
     Write-Host -ForegroundColor Red "Password Expired!"
