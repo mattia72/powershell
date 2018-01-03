@@ -1,5 +1,5 @@
 
-function Create-FileImageObject () 
+function Get-FileImageObject () 
 { 
     [CmdletBinding()] 
     Param(
@@ -85,7 +85,7 @@ function Get-ImageFiles()
                     continue;
                 }
 
-                Create-FileImageObject -File $fi
+                Get-FileImageObject -File $fi
             }
             else {
                 Write-Error "File not found: $Path" 
