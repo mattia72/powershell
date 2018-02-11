@@ -1,4 +1,4 @@
-$TortoisProcPath = "C:\Program Files\TortoiseSVN\bin\TortoiseProc.exe"
+$TortoisProcPath = "TortoiseProc.exe"
 
 Import-Module $PSScriptRoot\Show-MessageBox
 
