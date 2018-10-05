@@ -107,7 +107,7 @@ function Get-ItemsOlderThan()
     )
 
     $limit = (Get-Date).AddDays(-$Days)
-    Get-ChildItem -Path $Path -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.CreationTime -lt $limit } 
+    Get-ChildItem -Path $Path -Recurse -Force | Where-Object { !$_.PSIsContainer -and $_.LastWriteTime -lt $limit } 
 }
 function Copy-Images()
 {
