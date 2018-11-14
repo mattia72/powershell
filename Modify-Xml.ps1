@@ -21,14 +21,13 @@ function Get-Translation($text)
   $global:translate_cache[$text]
 }
 
-#[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
-$file = Get-Item "$env:USERPROFILE\Downloads\export_zasob7.xml"
+$file = Get-Item "$env:USERPROFILE\Downloads\input.xml"
 
 # load it into an XML object:
 $xml = New-Object -TypeName XML
 $xml.Load($file)
 
-$stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
+$stk = @{stk = "http://www.shema.com/schema/stock.xsd"}
 $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
 #$xnode.GetType()
 
