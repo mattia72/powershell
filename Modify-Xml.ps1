@@ -1,4 +1,11 @@
+param (
+# XML file to modify 
+[ValidateScript({(Test-Path -Path $_) })]
+$XmlFilePath
+) # must be the first statement in the script
+
 Import-Module -Name $PSScriptRoot\Show-GoogleTranslate -AsCustomObject
+
 
 function Add-XMLAttribute([System.Xml.XmlNode] $node, [string] $attr_name, [string] $attr_value)
 {
@@ -127,12 +134,13 @@ function Save-Xml() {
 
 $first_only = 1
 #[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
-$file = Get-Item "$env:USERPROFILE\Downloads\export_zasob7.xml"
+$file = Get-Item $XmlFilePath 
 $stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
 
 $translate_cache_path = $(Join-Path $file.Directory "translate_cache.txt")
 if (Test-Path $translate_cache_path) {
-  $translate_cache = Get-Content $translate_cache_path | Out-String | Invoke-Expression
+  #$translate_cache = Get-Content $translate_cache_path | Out-String | Invoke-Expression
+  $translate_cache = Get-Content -Raw $translate_cache_path | ConvertFrom-StringData
 }
 
 if ($translate_cache -eq $null) {
@@ -150,6 +158,6 @@ Save-Xml
 if ($translate_cache.Count -gt 0) {
   $translate_cache.GetEnumerator() | Sort-Object Name -Unique | 
     Where-Object {$_.Key -ne ''} |
-    ForEach-Object { "{0} = `"{1}`"" -f $_.Name, $_.Value} | 
+    ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
     Set-Content $translate_cache_path -Encoding UTF8 
 }
