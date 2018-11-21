@@ -19,7 +19,7 @@ function Add-XMLChildNode([System.Xml.XmlNode] $node, [string] $node_name, [stri
 {
   $child = $node.OwnerDocument.CreateElement($node_name)
   $child.InnerText = $node_value
-  $added = $node.AppendChild($child)
+  $node.AppendChild($child) | Out-Null
 }
 
 function Get-Translation([string] $text) {
@@ -53,7 +53,7 @@ function Get-Translation([string] $text) {
   return $translated
 }
 
-function Change-DescriptionNode()
+function Split-DescriptionNode()
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
   #$xnode.GetType()
@@ -92,7 +92,7 @@ function Change-DescriptionNode()
   }
   Write-Progress -Activity "Translate descriptions" -Completed
 }
-function Change-NameNode()
+function Split-NameNode()
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
   #$xnode.GetType()
@@ -129,8 +129,9 @@ function Change-NameNode()
 function Save-Xml() {
   #region Save 
 
+  $date_time = $(Get-Date -Format "yyyyMMddhhmm")
   # $savedFilePath=$(Join-Path $file.Directory "$($file.Basename)_saved_iso8859-2.xml")
-  $savedFilePath = $(Join-Path $file.Directory "$($file.Basename)_saved_utf-8.xml")
+  $savedFilePath = $(Join-Path $file.Directory "$($file.Basename)_${date_time}_utf-8.xml")
 
   try {
     #$enc = [System.Text.Encoding]::GetEncoding('iso-8859-2')
@@ -151,15 +152,13 @@ function Save-Xml() {
 
   }
   finally {
-    if ($writer -ne $null) {
+    if ($null -ne $writer ) {
       $writer.Close()
     }
   }
   #endregion
-
 }
 
-$date_time = $(Get-Date -Format "yyyyMMddhhmm")
 $first_only = 0
 #[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
 $file = Get-Item $XmlFilePath 
@@ -171,7 +170,7 @@ if (Test-Path $translate_cache_path) {
   $translate_cache = Get-Content -Raw $translate_cache_path | ConvertFrom-StringData
 }
 
-if ($translate_cache -eq $null) {
+if ($null -eq $translate_cache) {
   $translate_cache = @{}
 }
 
@@ -180,8 +179,8 @@ try {
   $xml = New-Object -TypeName XML
   $xml.Load($file)
 
-  Change-NameNode
-  Change-DescriptionNode
+  Split-NameNode
+  Split-DescriptionNode
   Save-Xml
 }
 catch {
