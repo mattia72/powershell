@@ -19,39 +19,46 @@ function Add-XMLChildNode([System.Xml.XmlNode] $node, [string] $node_name, [stri
 {
   $child = $node.OwnerDocument.CreateElement($node_name)
   $child.InnerText = $node_value
-  $node.AppendChild($child)
+  $added = $node.AppendChild($child)
 }
 
-function Get-Translation($text) {
+function Get-Translation([string] $text) {
+
+  if ($text -eq "") { return $text }
+
+  if($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
+
   if ($translate_cache.ContainsKey($text)) {
     Write-Information -InformationAction Continue "Translating from cache!"
     return $translate_cache[$text]
   }
 
+  $translated = $text
+
   if ($text -match '(^[0-9."x: ]+$)|(^[A-F][+-]?$)|(^RAM)|(^HDD)|(^LAN:)|(^Intel)|(^AMD)|(^NVIDIA)|(^Pentium)|(^Xeon)|(^Celeron)|(^VGA)|(^.*[#&])') {
     Write-Information -InformationAction Continue "Translating skipped for $text"
-    if($text -match '.*\r\n') {
-      $text = $text -replace '\r\n', "_NewLine_" 
-    }
-    $translate_cache.Add($text, $text)
-    return $text
   } else {
     Write-Information -InformationAction Continue "Call google translate: `"$text`""
     $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Console -Text $text)
-    if ($translated -ne "") {
-      $translate_cache.Add($text, $translated)
-      return $translated
-    } else {
-      $translate_cache.Add($text, $text)
-      return $text
-    }
   }
+
+  if ($translated -eq "") {
+    $translated = $text
+  } 
+
+  # if (-not $translate_cache.ContainsKey($text)) {
+    $translate_cache.Add($text, $translated)
+  # }
+
+  return $translated
 }
 
 function Change-DescriptionNode()
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
   #$xnode.GetType()
+  $i = 0
+  Write-Progress -Activity "Translate descriptions" -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
 
@@ -77,16 +84,21 @@ function Change-DescriptionNode()
       $i++
     }
 
+    Write-Progress -Activity "Translate descriptions" -PercentComplete ([int](100 * $i++ / $xnode.Count))
     if ($first_only -eq 1) {
       #only for test :)
       break
     }
   }
+  Write-Progress -Activity "Translate descriptions" -Completed
 }
 function Change-NameNode()
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
   #$xnode.GetType()
+
+  $i = 0
+  Write-Progress -Activity "Translate names" -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
     $hash = $item.InnerText.Split(";")
@@ -104,11 +116,14 @@ function Change-NameNode()
     }
     Add-XMLChildNode $item.ParentNode "name_line2" $line2
 
+    Write-Progress -Activity "Translate names" -PercentComplete ([int](100 * $i++ / $xnode.Count))
+
     if ($first_only -eq 1) {
       #only for test :)
       break
     }
   }
+    Write-Progress -Activity "Translate names" -Completed
 }
 
 function Save-Xml() {
@@ -144,6 +159,7 @@ function Save-Xml() {
 
 }
 
+$date_time = $(Get-Date -Format "yyyyMMddhhmm")
 $first_only = 0
 #[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
 $file = Get-Item $XmlFilePath 
@@ -159,17 +175,23 @@ if ($translate_cache -eq $null) {
   $translate_cache = @{}
 }
 
-# load it into an XML object:
-$xml = New-Object -TypeName XML
-$xml.Load($file)
+try {
+  # load it into an XML object:
+  $xml = New-Object -TypeName XML
+  $xml.Load($file)
 
-Change-NameNode
-Change-DescriptionNode
-Save-Xml
-
-if ($translate_cache.Count -gt 0) {
-  $translate_cache.GetEnumerator() | Sort-Object Name -Unique | 
-    Where-Object {$_.Key -ne ''} |
-    ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
-    Set-Content $translate_cache_path -Encoding UTF8 
+  Change-NameNode
+  Change-DescriptionNode
+  Save-Xml
+}
+catch {
+  Write-Error $_.Exception.Message
+}
+finally {
+  if ($translate_cache.Count -gt 0) {
+    $translate_cache.GetEnumerator() | Sort-Object Name -Unique | 
+      Where-Object {$_.Key -ne ''} |
+      ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
+      Set-Content $translate_cache_path -Encoding UTF8 
+  }
 }
