@@ -23,19 +23,28 @@ function Add-XMLChildNode([System.Xml.XmlNode] $node, [string] $node_name, [stri
 }
 
 function Get-Translation($text) {
-  if ($text -match '^[0-9"x: ]+$') {
-    return $text
-  }
-  else {
-    if (-not $translate_cache.ContainsKey($text)) {
-      Write-Information -InformationAction Continue "Call google to translate: `"$text`""
-      $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Console -Text $text)
-      $translate_cache.Add($text, $translated)
-    }
-    else {
-      Write-Information -InformationAction Continue "Translating skipped!"
-    }
+  if ($translate_cache.ContainsKey($text)) {
+    Write-Information -InformationAction Continue "Translating from cache!"
     return $translate_cache[$text]
+  }
+
+  if ($text -match '(^[0-9."x: ]+$)|(^[A-F][+-]?$)|(^RAM)|(^HDD)|(^LAN:)|(^Intel)|(^AMD)|(^NVIDIA)|(^Pentium)|(^Xeon)|(^Celeron)|(^VGA)|(^.*[#&])') {
+    Write-Information -InformationAction Continue "Translating skipped for $text"
+    if($text -match '.*\r\n') {
+      $text = $text -replace '\r\n', "_NewLine_" 
+    }
+    $translate_cache.Add($text, $text)
+    return $text
+  } else {
+    Write-Information -InformationAction Continue "Call google translate: `"$text`""
+    $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Console -Text $text)
+    if ($translated -ne "") {
+      $translate_cache.Add($text, $translated)
+      return $translated
+    } else {
+      $translate_cache.Add($text, $text)
+      return $text
+    }
   }
 }
 
@@ -50,7 +59,10 @@ function Change-DescriptionNode()
     foreach ($line in $($item.InnerText -split "`r`n")) {
       $arr = $line.Split('=')
       $line1 = $arr[0].Trim("$"," ","`t")
-      $line2 = $arr[1].Trim("#"," ","`t")
+      $line2 = ""
+      if ($arr.Count -gt 1) {
+        $line2 = $arr[1].Trim("#"," ","`t")
+      }
       $descr_arr+=@(,@($line1,$line2))
     }
 
@@ -132,7 +144,7 @@ function Save-Xml() {
 
 }
 
-$first_only = 1
+$first_only = 0
 #[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
 $file = Get-Item $XmlFilePath 
 $stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
