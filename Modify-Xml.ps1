@@ -29,7 +29,7 @@ function Get-Translation([string] $text) {
   if($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
 
   if ($translate_cache.ContainsKey($text)) {
-    Write-Information -InformationAction Continue "Translating from cache!"
+    Write-Verbose "Translating from cache!"
     return $translate_cache[$text]
   }
 
@@ -53,12 +53,12 @@ function Get-Translation([string] $text) {
   return $translated
 }
 
-function Split-DescriptionNode()
+function Split-DescriptionNode([xml] $xml)
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
   #$xnode.GetType()
   $i = 0
-  Write-Progress -Activity "Translate descriptions" -PercentComplete $i
+  Write-Progress -Activity Translate -Status Descriptions -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
 
@@ -73,36 +73,40 @@ function Split-DescriptionNode()
       $descr_arr+=@(,@($line1,$line2))
     }
 
+    $j = 0
     $item.InnerText = ""
-    $i = 0
     foreach ($descr_item in $descr_arr) {
-      $name = Get-Translation $descr_item[0]
-      $value = Get-Translation $descr_item[1]
+      $prefix = $descr_item[0]
+      $postfix = $descr_item[1]
+      Write-Progress -Activity Translate -Status Descriptions -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
+      $name = Get-Translation $prefix
+      $value = Get-Translation $postfix
 
-      Add-XMLChildNode $item.ParentNode "descr_name$i" $name 
-      Add-XMLChildNode $item.ParentNode "descr_value$i" $value
-      $i++
+      Add-XMLChildNode $item.ParentNode "descr_name$j" $name 
+      Add-XMLChildNode $item.ParentNode "descr_value$j" $value
+      $j++
     }
+    $i++
 
-    Write-Progress -Activity "Translate descriptions" -PercentComplete ([int](100 * $i++ / $xnode.Count))
     if ($first_only -eq 1) {
       #only for test :)
       break
     }
   }
-  Write-Progress -Activity "Translate descriptions" -Completed
+  Write-Progress -Activity Translate -Status Descriptions -Completed
 }
-function Split-NameNode()
+function Split-NameNode([xml] $xml)
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
   #$xnode.GetType()
 
   $i = 0
-  Write-Progress -Activity "Translate names" -PercentComplete $i
+  Write-Progress -Activity Translate -Status Names -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
-    $hash = $item.InnerText.Split(";")
+    Write-Progress -Activity Translate -Status Names -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
 
+    $hash = $item.InnerText.Split(";")
     $line1 = $hash[0].Trim()
     $line2 = ""
     $item.InnerText = ""
@@ -116,17 +120,16 @@ function Split-NameNode()
     }
     Add-XMLChildNode $item.ParentNode "name_line2" $line2
 
-    Write-Progress -Activity "Translate names" -PercentComplete ([int](100 * $i++ / $xnode.Count))
 
     if ($first_only -eq 1) {
       #only for test :)
       break
     }
   }
-    Write-Progress -Activity "Translate names" -Completed
+    Write-Progress -Activity Translate -Status Names -Completed
 }
 
-function Save-Xml() {
+function Save-Xml([xml]$xml, [System.IO.FileInfo]$file) {
   #region Save 
 
   $date_time = $(Get-Date -Format "yyyyMMddhhmm")
@@ -160,7 +163,6 @@ function Save-Xml() {
 }
 
 $first_only = 0
-#[xml]$xml = Get-Content "c:\msys64\home\mata\downloads\pelda_jav.xml"
 $file = Get-Item $XmlFilePath 
 $stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
 
@@ -179,9 +181,9 @@ try {
   $xml = New-Object -TypeName XML
   $xml.Load($file)
 
-  Split-NameNode
-  Split-DescriptionNode
-  Save-Xml
+  Split-NameNode $xml
+  Split-DescriptionNode $xml
+  Save-Xml $xml $file
 }
 catch {
   Write-Error $_.Exception.Message
