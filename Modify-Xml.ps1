@@ -58,7 +58,6 @@ function Split-DescriptionNode([xml] $xml)
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
   #$xnode.GetType()
   $i = 0
-  Write-Progress -Activity Translate -Status Descriptions -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
 
@@ -78,7 +77,7 @@ function Split-DescriptionNode([xml] $xml)
     foreach ($descr_item in $descr_arr) {
       $prefix = $descr_item[0]
       $postfix = $descr_item[1]
-      Write-Progress -Activity Translate -Status Descriptions -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
+      Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
       $name = Get-Translation $prefix
       $value = Get-Translation $postfix
 
@@ -93,18 +92,39 @@ function Split-DescriptionNode([xml] $xml)
       break
     }
   }
-  Write-Progress -Activity Translate -Status Descriptions -Completed
 }
+function Translate-StorageNode([xml] $xml)
+{
+  $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:storage"
+  #$xnode.GetType()
+
+  $i = 0
+  foreach ($item in $xnode.Node) {
+    Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
+    
+    $storages = $item.InnerText.Split("/")
+    $translated = ""
+    foreach ($storage in $storages) {
+      $translated += "$(Get-Translation $storage)/"
+    }
+    $item.InnerText = $translated
+
+    if ($first_only -eq 1) {
+      #only for test :)
+      break
+    }
+  }
+}
+
 function Split-NameNode([xml] $xml)
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
   #$xnode.GetType()
 
   $i = 0
-  Write-Progress -Activity Translate -Status Names -PercentComplete $i
 
   foreach ($item in $xnode.Node) {
-    Write-Progress -Activity Translate -Status Names -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
+    Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
 
     $hash = $item.InnerText.Split(";")
     $line1 = $hash[0].Trim()
@@ -126,7 +146,6 @@ function Split-NameNode([xml] $xml)
       break
     }
   }
-    Write-Progress -Activity Translate -Status Names -Completed
 }
 
 function Save-Xml([xml]$xml, [System.IO.FileInfo]$file) {
@@ -181,8 +200,27 @@ try {
   $xml = New-Object -TypeName XML
   $xml.Load($file)
 
+  $Step = 0
+  $TotalSteps = 3
+  Write-Progress -Id 1             -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
+
+  Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -PercentComplete 0
+  Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -PercentComplete 0
+  Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -PercentComplete 0
+  Translate-StorageNode $xml
+
+  $Step++
+  Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Split-NameNode $xml
+
+  $Step++
+  Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Split-DescriptionNode $xml
+
+  Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -Completed
+  Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -Completed
+  Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -Completed
+
   Save-Xml $xml $file
 }
 catch {
