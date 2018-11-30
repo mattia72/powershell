@@ -6,7 +6,6 @@ $XmlFilePath
 
 Import-Module -Name $PSScriptRoot\Show-GoogleTranslate -AsCustomObject
 
-
 function Add-XMLAttribute([System.Xml.XmlNode] $node, [string] $attr_name, [string] $attr_value)
 {
   $attrib = $node.OwnerDocument.CreateAttribute($attr_name)
@@ -53,7 +52,6 @@ function Get-Translation([string] $text) {
   return $translated
 }
 
-<<<<<<< HEAD
 function Split-DescriptionNode([xml] $xml)
 {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
@@ -61,9 +59,6 @@ function Split-DescriptionNode([xml] $xml)
   $i = 0
 
   foreach ($item in $xnode.Node) {
-=======
-$file = Get-Item "$env:USERPROFILE\Downloads\input.xml"
->>>>>>> ec88c545bf8437c9f2d801f1f75c5244b6b5b506
 
     $descr_arr = @()
     foreach ($line in $($item.InnerText -split "`r`n")) {
@@ -76,7 +71,6 @@ $file = Get-Item "$env:USERPROFILE\Downloads\input.xml"
       $descr_arr+=@(,@($line1,$line2))
     }
 
-<<<<<<< HEAD
     $j = 0
     $item.InnerText = ""
     foreach ($descr_item in $descr_arr) {
@@ -85,11 +79,6 @@ $file = Get-Item "$env:USERPROFILE\Downloads\input.xml"
       Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
       $name = Get-Translation $prefix
       $value = Get-Translation $postfix
-=======
-$stk = @{stk = "http://www.shema.com/schema/stock.xsd"}
-$xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
-#$xnode.GetType()
->>>>>>> ec88c545bf8437c9f2d801f1f75c5244b6b5b506
 
       Add-XMLChildNode $item.ParentNode "descr_name$j" $name 
       Add-XMLChildNode $item.ParentNode "descr_value$j" $value
