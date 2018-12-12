@@ -53,6 +53,9 @@ Function Show-GoogleTranslate
             [Parameter(parametersetname='Console' )]
             [Switch]$Console,
 
+            [Parameter(parametersetname='DOM' )]
+            [Switch]$DOM,
+
             [String]$InputEncoding = 'utf-8',
 
             [String]$OutputEncoding = 'utf-8'
@@ -129,23 +132,22 @@ Function Show-GoogleTranslate
       }
 
 
+      $URL = 'http://www.google.com/translate_t?hl=en&ie=' + $InputEncoding + '&oe=' + $OutputEncoding + '&text={0}&langpair={1}|{2}' -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to]
       if ($pscmdlet.ParameterSetName -eq 'IE')
       {
             $IE = New-Object -ComObject Internetexplorer.Application
-            $URL = 'http://translate.google.com/#{0}/{1}/{2}'   -f  $LanguageHashTable[$from],  $LanguageHashTable[$to],  $Text
-            $IE.Navigate($url)
-            $IE.Visible = $true
+            #$URL = 'http://translate.google.com/#{0}/{1}/{2}'   -f  $LanguageHashTable[$from],  $LanguageHashTable[$to],  $Text
+            $IE.Navigate2($url)
+            #$IE.Visible = $false
+            while ($IE.Busy -or ($IE.ReadyState -ne 4)) {
+                  Start-Sleep -Milliseconds 200
+            }
+            $IE.document.getElementsByClassName('tlid-translation translation')[0].innerText
            
       }
 
       if ($pscmdlet.ParameterSetName -eq 'Console')
       {
-            $URL = 'http://www.google.com/translate_t?hl=en&ie={3}&oe={4}&text={0}&langpair={1}|{2}' `
-                  -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to], $InputEncoding, $OutputEncoding
-
-            # $URL = 'https://translate.google.com/#view=home&op=translate&ie={3}&oe={4}&sl={1}&tl={2}&text={0}' `
-            #       -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to], $InputEncoding, $OutputEncoding
-
             $WebClient = New-Object System.Net.WebClient
             $WebClient.Encoding = [System.Text.Encoding]::UTF8
             $WebClient.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)")
@@ -155,6 +157,19 @@ Function Show-GoogleTranslate
             $TrResult = $Result.Substring($Result.IndexOf('id=result_box') + 22, 1000)
             [regex]::Match($TrResult,'(?s)(?<=onmouseout.*\>).*?(?=\<)')|  
                   ForEach-Object { $_.Groups.value  -replace '&#39;' ,"'"}
+      }
+
+      if ($pscmdlet.ParameterSetName -eq 'DOM')
+      {
+            $WebClient = New-Object System.Net.WebClient
+            $WebClient.Encoding = [System.Text.Encoding]::UTF8
+            $data = $WebClient.OpenRead($url)
+
+            $Reader = New-Object System.IO.StreamReader($data)
+            $htmlContent = $Reader.ReadToEnd();
+
+            $htmlDocument = 
+
       }
 }
 
