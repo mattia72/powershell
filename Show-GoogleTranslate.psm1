@@ -140,13 +140,21 @@ Function Show-GoogleTranslate
 
       if ($pscmdlet.ParameterSetName -eq 'Console')
       {
-            $URL = 'http://www.google.com/translate_t?hl=en&ie=' + $InputEncoding + '&oe=' + $OutputEncoding + '&text={0}&langpair={1}|{2}' -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to]
+            $URL = 'http://www.google.com/translate_t?hl=en&ie={3}&oe={4}&text={0}&langpair={1}|{2}' `
+                  -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to], $InputEncoding, $OutputEncoding
+
+            # $URL = 'https://translate.google.com/#view=home&op=translate&ie={3}&oe={4}&sl={1}&tl={2}&text={0}' `
+            #       -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to], $InputEncoding, $OutputEncoding
+
             $WebClient = New-Object System.Net.WebClient
             $WebClient.Encoding = [System.Text.Encoding]::UTF8
+            $WebClient.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)")
+
             $Result = $WebClient.DownloadString($url)
 
             $TrResult = $Result.Substring($Result.IndexOf('id=result_box') + 22, 1000)
-            [regex]::Match($TrResult,'(?s)(?<=onmouseout.*\>).*?(?=\<)')|  ForEach-Object { $_.Groups.value  -replace '&#39;' ,"'"}
+            [regex]::Match($TrResult,'(?s)(?<=onmouseout.*\>).*?(?=\<)')|  
+                  ForEach-Object { $_.Groups.value  -replace '&#39;' ,"'"}
       }
 }
 
@@ -155,4 +163,4 @@ Function Show-GoogleTranslate
 #Example
 #Show-GoogleTranslate -From Slovak -To Hungarian -Text "čierny, A" -Console
 
-Export-ModuleMember -Function Show-GoogleTranslate
+#Export-ModuleMember -Function Show-GoogleTranslate
