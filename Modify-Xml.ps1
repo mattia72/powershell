@@ -38,7 +38,7 @@ function Get-Translation([string] $text) {
     Write-Verbose -InformationAction Continue "Translating skipped for $text"
   } else {
     Write-Information -InformationAction Continue "Call google translate: `"$text`""
-    $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Console -Text $text)
+    $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Text $text)
   }
 
   if ($translated -eq "") {
@@ -122,7 +122,6 @@ function Split-NameNode([xml] $xml)
   #$xnode.GetType()
 
   $i = 0
-
   foreach ($item in $xnode.Node) {
     Write-Progress @NameParams -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
 
@@ -139,7 +138,6 @@ function Split-NameNode([xml] $xml)
       Write-Information "Splitted text has $($hash.Count) item. `"$($item.InnerText)`" "
     }
     Add-XMLChildNode $item.ParentNode "name_line2" $line2
-
 
     if ($first_only -eq 1) {
       #only for test :)
@@ -212,15 +210,17 @@ try {
   Write-Progress @StorageParams -PercentComplete 0
   Write-Progress @DescrParams -PercentComplete 0
   Split-NameNode $xml
-
+#---------------------------------------------
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Translate-StorageNode $xml
 
+#---------------------------------------------
 
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Split-DescriptionNode $xml
+#---------------------------------------------
 
   Write-Progress @StorageParams -Completed
   Write-Progress @NameParams -Completed
