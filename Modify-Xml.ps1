@@ -29,7 +29,7 @@ function Get-Translation([string] $text) {
 
   if ($text -eq "") { return $text }
 
-  if ($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
+  if ($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_ " }
 
   if ($TranslateCache.ContainsKey($text)) {
     Write-Verbose "Translating from cache!"
