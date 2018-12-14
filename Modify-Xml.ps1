@@ -1,31 +1,35 @@
 param (
-# XML file to modify 
-[ValidateScript({(Test-Path -Path $_) })]
-$XmlFilePath
+  # XML file to modify 
+  [ValidateScript( {(Test-Path -Path $_) })]
+  $XmlFilePath
 ) # must be the first statement in the script
 
-Import-Module -Name $PSScriptRoot\Show-GoogleTranslate -AsCustomObject
+Import-Module -Name $PSScriptRoot\Get-GoogleTranslate -AsCustomObject -Force
 
-function Add-XMLAttribute([System.Xml.XmlNode] $node, [string] $attr_name, [string] $attr_value)
-{
+function Add-XMLAttribute([System.Xml.XmlNode] $node, [string] $attr_name, [string] $attr_value) {
   $attrib = $node.OwnerDocument.CreateAttribute($attr_name)
   $attrib.Value = $attr_value
   $node.Attributes.Append($attrib)
   $node.InnerText = ""
 }
 
-function Add-XMLChildNode([System.Xml.XmlNode] $node, [string] $node_name, [string] $node_value)
-{
+function Add-XMLChildNode([System.Xml.XmlNode] $node, [string] $node_name, [string] $node_value) {
   $child = $node.OwnerDocument.CreateElement($node_name)
   $child.InnerText = $node_value
   $node.AppendChild($child) | Out-Null
+}
+
+function Add-ToDictIfNotExist($dict, $key, $value) {
+  if (-not $dict.ContainsKey($key)) {
+    $dict.Add($key, $value);
+  }
 }
 
 function Get-Translation([string] $text) {
 
   if ($text -eq "") { return $text }
 
-  if($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
+  if ($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
 
   if ($TranslateCache.ContainsKey($text)) {
     Write-Verbose "Translating from cache!"
@@ -33,27 +37,37 @@ function Get-Translation([string] $text) {
   }
 
   $translated = $text
+  $skipped = $false
 
-  if ($text -match '(^[0-9."x: ]+$)|(^[A-F][+-]?$)|(^RAM)|(^HDD)|(^LAN:)|(^Intel)|(^AMD)|(^NVIDIA)|(^Pentium)|(^Xeon)|(^Celeron)|(^VGA)|(^.*[#&])') {
+  if ($text -match '(^[0-9."x: ]+$)|(^[A-F][+-]?$)|(^RAM)|(^HDD)|(^LAN:)|' + `
+      '(^Intel)|(^AMD)|(^NVIDIA)|(^Pentium)|(^Xeon)|(^Celeron)|' + `
+      '(^Asus$)|(^Acer$)|(^Dell$)|(^HP$)|(^Lenovo$)|(^SUN$)|' + `
+      '(^PCI)|(^CPU:?)|(^DVD-ROM$)|(^USB Type-C$)|(^USB \d\.\d$)|' + `
+      '(^Core i\d)|(^VGA)|(^.*[#&])') 
+  {
     Write-Verbose -InformationAction Continue "Translating skipped for $text"
-  } else {
-    Write-Information -InformationAction Continue "Call google translate: `"$text`""
-    $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Text $text)
+    Add-ToDictIfNotExist $TranslateSkippedDict $text ""
+    $skipped = $true
+  }
+  else {
+    $translated = $(Get-GoogleTranslate -From Slovak -To Hungarian -Texts $text)
+    Write-Information -InformationAction Continue "`"$text`" = `"$translated`""
   }
 
-  if ($translated -eq "") {
-    $translated = $text
-  } 
-
-  # if (-not $TranslateCache.ContainsKey($text)) {
-    $TranslateCache.Add($text, $translated)
-  # }
+  if (-not $skipped) {
+    if ($translated -eq "") {
+      Add-ToDictIfNotExist $TranslateFailedDict $text ""
+      $translated = $text
+    } 
+    else {
+      $TranslateCache.Add($text, $translated)
+    }
+  }
 
   return $translated
 }
 
-function Split-DescriptionNode([xml] $xml)
-{
+function Split-DescriptionNode([xml] $xml) {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:description2"
   #$xnode.GetType()
   $i = 0
@@ -63,12 +77,12 @@ function Split-DescriptionNode([xml] $xml)
     $descr_arr = @()
     foreach ($line in $($item.InnerText -split "`r`n")) {
       $arr = $line.Split('=')
-      $line1 = $arr[0].Trim("$"," ","`t")
+      $line1 = $arr[0].Trim("$", " ", "`t")
       $line2 = ""
       if ($arr.Count -gt 1) {
-        $line2 = $arr[1].Trim("#"," ","`t")
+        $line2 = $arr[1].Trim("#", " ", "`t")
       }
-      $descr_arr+=@(,@($line1,$line2))
+      $descr_arr += @(, @($line1, $line2))
     }
 
     $j = 0
@@ -92,8 +106,7 @@ function Split-DescriptionNode([xml] $xml)
     }
   }
 }
-function Translate-StorageNode([xml] $xml)
-{
+function Translate-StorageNode([xml] $xml) {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:storage"
   #$xnode.GetType()
 
@@ -116,8 +129,7 @@ function Translate-StorageNode([xml] $xml)
   }
 }
 
-function Split-NameNode([xml] $xml)
-{
+function Split-NameNode([xml] $xml) {
   $xnode = Select-Xml -Xml $xml -Namespace $stk -XPath "//stk:stockHeader/stk:name"
   #$xnode.GetType()
 
@@ -143,6 +155,21 @@ function Split-NameNode([xml] $xml)
       #only for test :)
       break
     }
+  }
+}
+
+function Save-Dict($dict, $path) {
+  try {
+    if ($dict.Count -gt 0) {
+      Write-Information -InformationAction Continue "Saving ($($dict.Count) item): `"$path`""
+      $dict.GetEnumerator() | Sort-Object Name -Unique | 
+        Where-Object {$_.Key -ne ''} |
+        ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
+        Set-Content $path -Encoding UTF8 
+    }
+  }
+  catch {
+    Write-Error $_.Exception.Message
   }
 }
 
@@ -185,43 +212,46 @@ $file = Get-Item $XmlFilePath
 $stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
 
 $TranslateCachePath = $(Join-Path $file.Directory "translate_cache.txt")
+$TranslateFailedPath = $(Join-Path $file.Directory "translate_failed.txt")
+$TranslateSkippedPath = $(Join-Path $file.Directory "translate_skipped.txt")
 if (Test-Path $TranslateCachePath) {
   #$TranslateCache = Get-Content $TranslateCachePath | Out-String | Invoke-Expression
   $TranslateCache = Get-Content -Raw $TranslateCachePath | ConvertFrom-StringData
 }
 else {
-# if ($null -eq $TranslateCache) {
+  # if ($null -eq $TranslateCache) {
   $TranslateCache = @{}
 }
+$TranslateFailedDict = @{}
+$TranslateSkippedDict = @{}
 
 try {
   # load it into an XML object:
   $xml = New-Object -TypeName XML
   $xml.Load($file)
 
-  $Step = 1
+  $Step = 0
   $TotalSteps = 3
-  $NameParams = @{'Id'=2; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Names'}
-  $StorageParams = @{'Id'=3; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Storages'}
-  $DescrParams = @{'Id'=4; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Descriptions'}
+  $NameParams = @{'Id' = 2; 'ParentId' = 1; 'Activity' = 'Translate'; 'Status' = 'Names'}
+  $StorageParams = @{'Id' = 3; 'ParentId' = 1; 'Activity' = 'Translate'; 'Status' = 'Storages'}
+  $DescrParams = @{'Id' = 4; 'ParentId' = 1; 'Activity' = 'Translate'; 'Status' = 'Descriptions'}
   Write-Progress -Id 1             -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
 
   Write-Progress @NameParams -PercentComplete 0
   Write-Progress @StorageParams -PercentComplete 0
   Write-Progress @DescrParams -PercentComplete 0
   Split-NameNode $xml
-#---------------------------------------------
+  #---------------------------------------------
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Translate-StorageNode $xml
-
-#---------------------------------------------
-
+  #---------------------------------------------
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Split-DescriptionNode $xml
-#---------------------------------------------
-
+  #---------------------------------------------
+  $Step++
+  Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Write-Progress @StorageParams -Completed
   Write-Progress @NameParams -Completed
   Write-Progress @DescrParams -Completed
@@ -232,11 +262,7 @@ catch {
   Write-Error $_.Exception.Message
 }
 finally {
-  Write-Information -InformationAction Continue "Saving translate cache: `"$TranslateCachePath`""
-  if ($TranslateCache.Count -gt 0) {
-    $TranslateCache.GetEnumerator() | Sort-Object Name -Unique | 
-      Where-Object {$_.Key -ne ''} |
-      ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
-      Set-Content $TranslateCachePath -Encoding UTF8 
-  }
+  Save-Dict $TranslateCache $TranslateCachePath
+  Save-Dict $TranslateFailedDict $TranslateFailedPath
+  Save-Dict $TranslateSkippedDict $TranslateSkippedPath
 }

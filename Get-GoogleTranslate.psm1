@@ -6,6 +6,7 @@
 .EXAMPLE
       PS C:\> Get-GoogleTranslate -From English -To French -Texts "Have a Good day $env:USERNAME" 
       Translate some text from english to french 
+
       PS C:\> "monday", "tuesday" | Get-GoogleTranslate -From English -To French
       Translate some text from english to french from pipe
 .INPUTS
@@ -40,11 +41,11 @@ Function Get-GoogleTranslate {
   param
   (
     [Parameter(ValueFromPipeline = $False)]
-    [ValidateScript({Get-SupportedLanguages})]
+    [ValidateScript( {Get-SupportedLanguages})]
     [String]$From = 'English',
 
     [Parameter(ValueFromPipeline = $False)]
-    [ValidateScript({Get-SupportedLanguages})]
+    [ValidateScript( {Get-SupportedLanguages})]
     [String]$To,
 
     [Parameter(ValueFromPipeline = $True)]
@@ -65,17 +66,20 @@ Function Get-GoogleTranslate {
     try {
       foreach ($text in $Texts) {
 
-        $URL = 'http://www.google.com/translate_t?hl=en&ie=' + $InputEncoding `
+        $EncodedText = [System.Web.HttpUtility]::UrlEncode($text) 
+        $URL = 'http://www.google.com/' `
+          + 'translate_t?hl=en&ie=' + $InputEncoding `
           + '&oe=' + $OutputEncoding + '&text={0}&langpair={1}|{2}' `
-          -f $text, $(Get-SupportedLangCode $from), $(Get-SupportedLangCode $to)
+          -f $EncodedText, $(Get-SupportedLangCode $from), $(Get-SupportedLangCode $to)
 
-        $IE.Navigate2($url)
+        $IE.Navigate2(${URL})
 
         while ($IE.Busy -or ($IE.ReadyState -ne 4)) {
-          Start-Sleep -Milliseconds 200
+          Start-Sleep -Milliseconds 1
         }
 
-        $IE.document.getElementsByClassName('tlid-translation translation')[0].innerText
+        $innerText = $IE.document.getElementsByClassName('tlid-translation translation')[0].innerText
+        $innerText
       }
     }
     catch { Write-Error $_.Exception.Message }
@@ -90,3 +94,4 @@ Function Get-GoogleTranslate {
 }
 
 Export-ModuleMember -Function Get-GoogleTranslate, Get-SupportedLanguages, Get-SupportedLangCode
+Add-Type -AssemblyName System.Web
