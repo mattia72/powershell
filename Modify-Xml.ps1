@@ -27,15 +27,15 @@ function Get-Translation([string] $text) {
 
   if($text -match ".*\r\n") { $text = $text -replace "\r\n", "_NEWLINE_" }
 
-  if ($translate_cache.ContainsKey($text)) {
+  if ($TranslateCache.ContainsKey($text)) {
     Write-Verbose "Translating from cache!"
-    return $translate_cache[$text]
+    return $TranslateCache[$text]
   }
 
   $translated = $text
 
   if ($text -match '(^[0-9."x: ]+$)|(^[A-F][+-]?$)|(^RAM)|(^HDD)|(^LAN:)|(^Intel)|(^AMD)|(^NVIDIA)|(^Pentium)|(^Xeon)|(^Celeron)|(^VGA)|(^.*[#&])') {
-    Write-Information -InformationAction Continue "Translating skipped for $text"
+    Write-Verbose -InformationAction Continue "Translating skipped for $text"
   } else {
     Write-Information -InformationAction Continue "Call google translate: `"$text`""
     $translated = $(Show-GoogleTranslate -From Slovak -To Hungarian -Console -Text $text)
@@ -45,8 +45,8 @@ function Get-Translation([string] $text) {
     $translated = $text
   } 
 
-  # if (-not $translate_cache.ContainsKey($text)) {
-    $translate_cache.Add($text, $translated)
+  # if (-not $TranslateCache.ContainsKey($text)) {
+    $TranslateCache.Add($text, $translated)
   # }
 
   return $translated
@@ -76,7 +76,7 @@ function Split-DescriptionNode([xml] $xml)
     foreach ($descr_item in $descr_arr) {
       $prefix = $descr_item[0]
       $postfix = $descr_item[1]
-      Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
+      Write-Progress @DescrParams -CurrentOperation "$prefix $postfix" -PercentComplete ([int](100 * $i / $xnode.Count))
       $name = Get-Translation $prefix
       $value = Get-Translation $postfix
 
@@ -99,14 +99,15 @@ function Translate-StorageNode([xml] $xml)
 
   $i = 0
   foreach ($item in $xnode.Node) {
-    Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
+    Write-Progress @StorageParams -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
     
     $storages = $item.InnerText.Split("/")
     $translated = ""
     foreach ($storage in $storages) {
       $translated += "$(Get-Translation $storage)/"
     }
-    $item.InnerText = $translated
+
+    $item.InnerText = $translated.TrimEnd("/")
 
     if ($first_only -eq 1) {
       #only for test :)
@@ -123,7 +124,7 @@ function Split-NameNode([xml] $xml)
   $i = 0
 
   foreach ($item in $xnode.Node) {
-    Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
+    Write-Progress @NameParams -CurrentOperation $item.InnerText -PercentComplete ([int](100 * $i++ / $xnode.Count))
 
     $hash = $item.InnerText.Split(";")
     $line1 = $hash[0].Trim()
@@ -169,6 +170,7 @@ function Save-Xml([xml]$xml, [System.IO.FileInfo]$file) {
     # $textWriter = New-Object System.Xml.XmlTextWriter($savedFilePath,[System.Text.Encoding]::UTF8)
     # $writer = New-Object System.Xml.XmlWriter($textWriter, $settings)
 
+    Write-Information -InformationAction Continue "Saving: `"$savedFilePath`""
     $xml.Save($writer)
 
   }
@@ -184,14 +186,14 @@ $first_only = 0
 $file = Get-Item $XmlFilePath 
 $stk = @{stk = "http://www.stormware.cz/schema/version_2/stock.xsd"}
 
-$translate_cache_path = $(Join-Path $file.Directory "translate_cache.txt")
-if (Test-Path $translate_cache_path) {
-  #$translate_cache = Get-Content $translate_cache_path | Out-String | Invoke-Expression
-  $translate_cache = Get-Content -Raw $translate_cache_path | ConvertFrom-StringData
+$TranslateCachePath = $(Join-Path $file.Directory "translate_cache.txt")
+if (Test-Path $TranslateCachePath) {
+  #$TranslateCache = Get-Content $TranslateCachePath | Out-String | Invoke-Expression
+  $TranslateCache = Get-Content -Raw $TranslateCachePath | ConvertFrom-StringData
 }
-
-if ($null -eq $translate_cache) {
-  $translate_cache = @{}
+else {
+# if ($null -eq $TranslateCache) {
+  $TranslateCache = @{}
 }
 
 try {
@@ -199,26 +201,30 @@ try {
   $xml = New-Object -TypeName XML
   $xml.Load($file)
 
-  $Step = 0
+  $Step = 1
   $TotalSteps = 3
+  $NameParams = @{'Id'=2; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Names'}
+  $StorageParams = @{'Id'=3; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Storages'}
+  $DescrParams = @{'Id'=4; 'ParentId'=1; 'Activity'= 'Translate'; 'Status'= 'Descriptions'}
   Write-Progress -Id 1             -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
 
-  Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -PercentComplete 0
-  Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -PercentComplete 0
-  Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -PercentComplete 0
-  Translate-StorageNode $xml
+  Write-Progress @NameParams -PercentComplete 0
+  Write-Progress @StorageParams -PercentComplete 0
+  Write-Progress @DescrParams -PercentComplete 0
+  Split-NameNode $xml
 
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
-  Split-NameNode $xml
+  Translate-StorageNode $xml
+
 
   $Step++
   Write-Progress -Id 1 -Activity Translate -Status "Step $Step of $TotalSteps" -PercentComplete ($Step / $TotalSteps * 100) 
   Split-DescriptionNode $xml
 
-  Write-Progress -Id 4 -ParentId 1 -Activity Translate -Status Storage -Completed
-  Write-Progress -Id 2 -ParentId 1 -Activity Translate -Status Names -Completed
-  Write-Progress -Id 5 -ParentId 1 -Activity Translate -Status Descriptions -Completed
+  Write-Progress @StorageParams -Completed
+  Write-Progress @NameParams -Completed
+  Write-Progress @DescrParams -Completed
 
   Save-Xml $xml $file
 }
@@ -226,10 +232,11 @@ catch {
   Write-Error $_.Exception.Message
 }
 finally {
-  if ($translate_cache.Count -gt 0) {
-    $translate_cache.GetEnumerator() | Sort-Object Name -Unique | 
+  Write-Information -InformationAction Continue "Saving translate cache: `"$TranslateCachePath`""
+  if ($TranslateCache.Count -gt 0) {
+    $TranslateCache.GetEnumerator() | Sort-Object Name -Unique | 
       Where-Object {$_.Key -ne ''} |
       ForEach-Object { "{0} = {1}" -f $_.Name, $_.Value} | 
-      Set-Content $translate_cache_path -Encoding UTF8 
+      Set-Content $TranslateCachePath -Encoding UTF8 
   }
 }

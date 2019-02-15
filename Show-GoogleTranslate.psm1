@@ -150,15 +150,17 @@ Function Show-GoogleTranslate
       {
             $WebClient = New-Object System.Net.WebClient
             $WebClient.Encoding = [System.Text.Encoding]::UTF8
+            $WebClient.Headers.Add("user-agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.2; .NET CLR 1.0.3705;)")
+
             $Result = $WebClient.DownloadString($url)
 
             $TrResult = $Result.Substring($Result.IndexOf('id=result_box') + 22, 1000)
-            [regex]::Match($TrResult,'(?s)(?<=onmouseout.*\>).*?(?=\<)')|  ForEach-Object { $_.Groups.value  -replace '&#39;' ,"'"}
+            [regex]::Match($TrResult,'(?s)(?<=onmouseout.*\>).*?(?=\<)')|  
+                  ForEach-Object { $_.Groups.value  -replace '&#39;' ,"'"}
       }
 
       if ($pscmdlet.ParameterSetName -eq 'DOM')
       {
-            $URL = 'http://www.google.com/translate_t?hl=en&ie=' + $InputEncoding + '&oe=' + $OutputEncoding + '&text={0}&langpair={1}|{2}' -f $Text, $LanguageHashTable[$from],  $LanguageHashTable[$to]
             $WebClient = New-Object System.Net.WebClient
             $WebClient.Encoding = [System.Text.Encoding]::UTF8
             $data = $WebClient.OpenRead($url)
@@ -176,4 +178,4 @@ Function Show-GoogleTranslate
 #Example
 #Show-GoogleTranslate -From Slovak -To Hungarian -Text "čierny, A" -Console
 
-Export-ModuleMember -Function Show-GoogleTranslate
+#Export-ModuleMember -Function Show-GoogleTranslate
