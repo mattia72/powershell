@@ -52,6 +52,6 @@ function Add-PascalUnitToUses {
 }
 
 
-Export-ModuleMember -Function Add-PascalUnitToUses
+# Export-ModuleMember -Function Add-PascalUnitToUses
 $FilePath = "D:\SCCS\agsrc_trunk\WinLohn\Lohn-Package\unBaulohnMeldeprotokoll.pas" 
-Add-PascalUnitToUses -FilePath $FilePath -Section implementation -Unit "UnitBlaBla" 
+Add-PascalUnitToUses -FilePath $FilePath -Section implementation -Unit "UnitBlaBla23" 
