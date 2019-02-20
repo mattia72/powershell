@@ -10,7 +10,19 @@
 .INPUTS
   Inputs (if any)
 .OUTPUTS
-  Output (if any)
+eg:
+implementation
+uses
+	unMessage
+	, unKonv
+...
+will be:
+implementation
+uses
+  <New unit>
+	, unMessage
+	, unKonv
+...
 .NOTES
   General notes
 #>
@@ -20,14 +32,18 @@ function Add-PascalUnitToUses {
 		[Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [ValidateScript( { (Test-Path -Path $_) })]
     $FilePath, 
-		[Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+		[Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [ValidateSet("interface", "implementation")]
     $Section, 
-		[Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+		[Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     $Unit
   )
   begin {}
   process {
+    if ([string]::IsNullOrEmpty($Unit)) {
+      Write-Verbose("There is no unit to add to $FilePath")
+      return
+    }
     $fileContent = (Get-Content -Path $FilePath -Raw)
 
     if ($fileContent -match "\b$Unit\b") {
@@ -53,5 +69,3 @@ function Add-PascalUnitToUses {
 
 
 Export-ModuleMember -Function Add-PascalUnitToUses
-$FilePath = "D:\SCCS\agsrc_trunk\WinLohn\Lohn-Package\unBaulohnMeldeprotokoll.pas" 
-Add-PascalUnitToUses -FilePath $FilePath -Section implementation -Unit "UnitBlaBla" 

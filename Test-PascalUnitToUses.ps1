@@ -1,19 +1,7 @@
-<#
-.SYNOPSIS
-  Adds given unit to uses section in a pascal file if not listed already 
-.DESCRIPTION
-  Adds given unit to uses section in a pascal file. 
-  The given unit will be the first in the uses list, if it doesn't appear in the file already
-.EXAMPLE
-  PS C:\> <example usage>
-  Explanation of what the example does
-.INPUTS
-  Inputs (if any)
-.OUTPUTS
-  Output (if any)
-.NOTES
-  General notes
-#>
+
+#
+# Test for Add-PascalUnitToUses.psm1
+#
 
 function Add-PascalUnitToUses {
   param (  
