@@ -23,6 +23,8 @@ function Remove-BlockFromFile {
 
   Remove-BlockFromText -Text (Get-Content -Path $File -Raw) -Begin $Begin -End $End -Contain $Contain | 
     Set-Content -Path $File -NoNewline
+
+  Write-Verbose "$File changed." 
 }
 function Remove-BlockFromText {
   param(
