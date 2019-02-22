@@ -26,6 +26,8 @@ function Remove-BlockFromFile {
 
   Write-Verbose "$File changed." 
 }
+
+$global:BlockPattern = "(?smi){0}(?:(?!{0})[\s\S\r])*?{2}[\s\S\r]*?{1}"
 function Remove-BlockFromText {
   param(
     $Text,
@@ -34,6 +36,5 @@ function Remove-BlockFromText {
     $Contain
   )
 
-  $pattern = "(?smi)$Begin(?:(?!$Begin)[\s\S\r])*?$Contain[\s\S\r]*?$End"
-  $Text -replace $Pattern, ''
+  $Text -replace $($global:BlockPattern -f $Begin,$End,$Contain), ''
 }
