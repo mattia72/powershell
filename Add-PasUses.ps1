@@ -40,7 +40,7 @@ function Add-UnitToUses {
     $sectionPattern = "(?smi)^\s*$Section" 
     $usesPattern = "$sectionPattern\s*uses\s*"
     # $sectionHasUses = $fileContent -match $usesPattern
-    $sectionHasUses = $fileContent -match "$usesPattern(\w+)\s*"
+    $sectionHasUses = $fileContent -match "$usesPattern([\w.]+)\s*"
 
     if(-not $sectionHasUses){
       Write-Warning("No uses in $Section section in $FilePath")
@@ -48,7 +48,7 @@ function Add-UnitToUses {
     }
     else {
       Write-Host("Add $Unit in $Section section in $FilePath")
-      $fileContent -replace "(?smi)^(\s*$Section\s*uses)\s*([\w.]+)\s*", "`$1`n`t$Unit`n`t, `$2`n`t" | Set-Content -Path $FilePath 
+      $fileContent -replace "((?smi)^\s*$Section\s*uses)\s*([\w.]+)\s*", "`$1`n`t$Unit`n`t, `$2`n`t" | Set-Content -Path $FilePath 
     }
   }
   end {}
@@ -58,7 +58,7 @@ function Add-UnitToUses {
 $Path = "C:\Program Files (x86)\Embarcadero\Studio\19.0\ObjRepos\de\DelphiWin32\SDIApp"
 # $Path = "$env:AGSRC\WinLohn"
 # $SearchString = "AGridStorageDBZmiv"
-$SearchString = "About4"
+$SearchString = "About5"
 
 Get-ChildItem -Path $Path -Include *.pas, *.inc -File -Recurse -ErrorAction SilentlyContinue | 
   ForEach-Object { Add-UnitToUses -FilePath $_ -Section interface -Unit "$SearchString" } 
