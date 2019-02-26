@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Helper functions for block searching replacing
+  Helper functions for block searching & replacing
 .DESCRIPTION
   Long description
 .EXAMPLE
@@ -23,13 +23,14 @@ function Remove-LinesFromFile {
     $FilePath,
     [int[]] $lineNums
   )
-  $content = Get-Content $FilePath
-  $content | ForEach-Object {
-    $count = 1 
-    if ($lineNums.Contains($count++)) {
-      $_
-    }
-  } | Set-Content -Path $FilePath -NoNewline 
+  process {
+    Get-Content $FilePath | ForEach-Object {
+      $count = 1 
+      if ($lineNums.Contains($count++)) {
+        $_
+      }
+    } | Set-Content -Path $FilePath -NoNewline 
+  }
 }
 
 function Remove-BlockFromFile {
@@ -51,23 +52,24 @@ function Remove-BlockFromFile {
 
     Write-Verbose "Block removed from $FilePath successfully." 
   }
-  end{
+  end {
     Write-Verbose "$count file(s) changed."
   }
 }
 function Select-TextContainsBlock {
   [cmdletbinding()]
   param(
+    [Parameter(Mandatory = $True, ValueFromPipeline = $True, ValueFromPipelinebyPropertyName = $True)]
     $Text,
     $Begin,
     $End,
     $Contain
   )
-
-  if($Text -match $($global:BlockPattern -f $Begin,$End,$Contain)){
-    $Text
+  process {
+    $Text | Where-Object {$Text -match $($global:BlockPattern -f $Begin, $End, $Contain)}
   }
 }
+
 function Select-FileContentContainsBlock {
   [cmdletbinding()]
   param(
@@ -79,8 +81,7 @@ function Select-FileContentContainsBlock {
     $Contain
   )
   process {
-    $Text = Get-Content -Path $FilePath -Raw
-    $Text | Where-Object {$_ -match $($global:BlockPattern -f $Begin,$End,$Contain)}
+    Get-Content -Path $FilePath -Raw |  Select-TextContainsBlock -Begin $Begin -End $End -Contain $Contain
   }
 }
 
@@ -94,12 +95,13 @@ function Remove-BlockFromText {
     $Contain,
     [switch] $FirstOnly
   )
-
-  if ($FirstOnly) {
-    $Text -replace $($global:BlockPattern -f $Begin,"${End}(?<AfterBlock>.*)",$Contain), '${AfterBlock}'
-  }
-  else{
-    $Text -replace $($global:BlockPattern -f $Begin, $End, $Contain), ''
+  process {
+    if ($FirstOnly) {
+      $Text -replace $($global:BlockPattern -f $Begin, "${End}(?<AfterBlock>.*)", $Contain), '${AfterBlock}'
+    }
+    else {
+      $Text -replace $($global:BlockPattern -f $Begin, $End, $Contain), ''
+    }
   }
 }
 
