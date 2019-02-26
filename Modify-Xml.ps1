@@ -55,7 +55,7 @@ function Get-Translation([string] $text) {
   }
 
   if (-not $skipped) {
-    if ($translated -eq "") {
+    if ([string]::IsNullOrEmpty($translated)) {
       Add-ToDictIfNotExist $TranslateFailedDict $text ""
       $translated = $text
     } 
