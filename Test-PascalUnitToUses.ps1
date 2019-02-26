@@ -14,7 +14,6 @@ function Add-PascalUnitToUses {
 		[Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     $Unit
   )
-  begin {}
   process {
     $fileContent = (Get-Content -Path $FilePath -Raw)
 
@@ -32,11 +31,10 @@ function Add-PascalUnitToUses {
       $fileContent -replace $sectionPattern,"$&`r`n`r`nuses`r`n`t$Unit`r`n`t;" | Set-Content -Path $FilePath -NoNewline
     }
     else {
-      Write-Verbose("Add $Unit to $Section section in $FilePath")
+      Write-Verbose("$FilePath $Unit added to $Section section.")
       $fileContent -replace "(?smi)^(\s*$Section\s*uses)\s*([\w.]+)\s*","`$1`r`n`t$Unit`r`n`t, `$2`r`n`t" | Set-Content -Path $FilePath -NoNewline
     }
   }
-  end {}
 }
 
 

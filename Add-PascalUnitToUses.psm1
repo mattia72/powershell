@@ -28,6 +28,7 @@ uses
 #>
 
 function Add-PascalUnitToUses {
+  [cmdletbinding()]
   param (  
 		[Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [ValidateScript( { (Test-Path -Path $_) })]
@@ -38,7 +39,6 @@ function Add-PascalUnitToUses {
 		[Parameter(Mandatory=$False,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     $Unit
   )
-  begin {}
   process {
     if ([string]::IsNullOrEmpty($Unit)) {
       Write-Verbose("There is no unit to add to $FilePath")
@@ -47,7 +47,7 @@ function Add-PascalUnitToUses {
     $fileContent = (Get-Content -Path $FilePath -Raw)
 
     if ($fileContent -match "\b$Unit\b") {
-      Write-Warning("$Unit already exists in $FilePath")
+      Write-Warning("$FilePath already has $Unit listed.")
       return
     }
 
@@ -56,15 +56,14 @@ function Add-PascalUnitToUses {
     $sectionHasUses = $fileContent -match "$usesPattern(\w+)\s*"
 
     if (-not $sectionHasUses) {
-      Write-Warning("No uses in $Section section in $FilePath")
+      Write-Warning("$FilePath has no uses in $Section section.")
       $fileContent -replace $sectionPattern,"$&`r`n`r`nuses`r`n`t$Unit`r`n`t;" | Set-Content -Path $FilePath -NoNewline
     }
     else {
-      Write-Verbose("Add $Unit to $Section section in $FilePath")
+      Write-Verbose("$FilePath $Unit added to $Section section.")
       $fileContent -replace "(?smi)^(\s*$Section\s*uses)\s*([\w.]+)\s*","`$1`r`n`t$Unit`r`n`t, `$2`r`n`t" | Set-Content -Path $FilePath -NoNewline
     }
   }
-  end {}
 }
 
 

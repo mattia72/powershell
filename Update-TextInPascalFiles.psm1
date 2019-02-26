@@ -14,11 +14,14 @@
   General notes
 #>
 
-Import-Module C:\Users\mattiassich\home\dev\powershell\Add-PascalUnitToUses
+Import-Module ${env:HOME}\dev\powershell\Add-PascalUnitToUses -Force
+Import-Module ${env:HOME}\dev\powershell\Remove-FromFile -Force
 
 function Update-TextInPascalFile {
   param ( 
+    [ValidateScript( {(Test-Path -Path $_)})]
     $FilePath, 
+    $Search,
     $Replace, 
     [Parameter(Mandatory = $False, ValueFromPipeline = $True, ValueFromPipelinebyPropertyName = $True)]
     [ValidateSet("interface", "implementation")]
@@ -27,15 +30,16 @@ function Update-TextInPascalFile {
     $Unit 
   )
   process {
-    (Get-Content -Path $FilePath -Raw) -replace "$Search", "$Replace"  | Set-Content -Path "$FilePath" -NoNewline
+    (Get-Content -Path $FilePath -Raw) -replace $Search, $Replace  | Set-Content -Path $FilePath -NoNewline
     Add-PascalUnitToUses -FilePath $FilePath -Section $Section -Unit $Unit 
   }
   end {
-    Write-Host "$FilePath files changed successfully." -ForegroundColor Magenta
+    Write-Verbose "${FilePath} changed."
   }
 }
 function Update-TextInPascalDirectory {
   param ( 
+    [ValidateScript( {(Test-Path -Path $_)})]
     $Directory, 
     [string[]]$FileTypes = @( "*.pas", "*.inc" ),
     $Search, 
@@ -61,8 +65,39 @@ function Update-TextInPascalDirectory {
     } 
   }
   end {
-    Write-Host "$count files changed successfully." -ForegroundColor Magenta
+    Write-Verbose "$count pascal file(s) changed." 
   }
 }
 
-Export-ModuleMember -Function Update-TextInPascalFiles
+function Remove-HistoryBlock {
+  [cmdletbinding()]
+  param(
+    [Parameter(Mandatory = $True, ValueFromPipeline = $True, ValueFromPipelinebyPropertyName = $True)]
+    [ValidateScript( {(Test-Path -Path $_)})]
+    [string] $FilePath 
+  )
+  begin {
+    $count = 0
+  }
+  process {
+    $B = "{"
+    $E = "}[ \t]*\r\n"
+    $Contain = "\r\n[\t /]*[A-Z ]{3} \d\d\.\d\d\.\d\d Task="
+    Select-FileContentContainsBlock -FilePath $FilePath -Begin $B -End $E -Contain $Contain | 
+      Where-Object { $_ -ne "" } |
+        ForEach-Object { 
+          $count++ 
+          $_
+        } | 
+      Remove-BlockFromText  -Begin $B -End $E -Contain $Contain -FirstOnly | 
+      ForEach-Object { 
+      Write-Verbose "${FilePath} history block removed."
+      $_} | 
+      Set-Content -Path $FilePath -NoNewline
+  }
+  end {
+    Write-Verbose "History block removed from $count file(s)."
+  }
+}
+
+Export-ModuleMember -Function Update-TextInPascalFile, Update-TextInPascalDirectory, Remove-HistoryBlock
