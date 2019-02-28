@@ -83,7 +83,8 @@ function Remove-HistoryBlock {
     $B = "{"
     $E = "}[ \t]*\r\n"
     $Contain = "\r\n[\t /]*[A-Z ]{3} \d\d\.\d\d\.\d\d Task="
-    Select-FileContentContainsBlock -FilePath $FilePath -Begin $B -End $E -Contain $Contain | 
+    Write-Verbose "${FilePath} searching history block."
+    $NewContent = Select-FileContentContainsBlock -FilePath $FilePath -Begin $B -End $E -Contain $Contain | 
       Where-Object { $_ -ne "" } |
         ForEach-Object { 
           $count++ 
@@ -92,8 +93,9 @@ function Remove-HistoryBlock {
       Remove-BlockFromText  -Begin $B -End $E -Contain $Contain -FirstOnly | 
       ForEach-Object { 
       Write-Verbose "${FilePath} history block removed."
-      $_} | 
-      Set-Content -Path $FilePath -NoNewline
+      $_}  
+
+      $NewContent | Set-Content -Path $FilePath -NoNewline
   }
   end {
     Write-Verbose "History block removed from $count file(s)."
