@@ -39,7 +39,7 @@ Write-Host $("{0,13} |" -f "Backgr/Foregr") -NoNewline
 foreach ($fgColor in $fgColors) {
   Write-Host "$fgColor " -NoNewline
 }
-Write-Host "`n--------------------------------------------------------------------------------------------------------------------------------------"
+Write-Host "`n---------------------------------------------------------------------------------------------------------------------------------------"
 foreach ($bgColor in $bgColors) { 
   Write-Host $("{0,13} |" -f $bgColor) -NoNewline
   foreach ($fgColor in $fgColors) {
