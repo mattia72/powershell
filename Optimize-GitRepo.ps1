@@ -6,21 +6,8 @@ param (
   [switch]$Recurse
 )
 
-function Get-ByteSize{
-  [CmdletBinding()]
-  param (
-    [Parameter(Position = 0, Mandatory = $true, ValueFromPipeline = $true)]
-    $Size
-  )
-  process {
-    if( ($Size / 1TB) -gt 0.9)     { "$("{0:n2}" -f ($Size / 1TB)) TB" }
-    elseif( ($Size / 1GB) -gt 0.9) { "$("{0:n2}" -f ($Size / 1GB)) GB" }
-    elseif( ($Size / 1MB) -gt 0.9) { "$("{0:n2}" -f ($Size / 1MB)) MB" }
-    elseif( ($Size / 1KB) -gt 0.9) { "$("{0:n2}" -f ($Size / 1KB)) KB" }
-    else { "$Size B" }
-  }
+Import-Module ${env:HOME}\dev\powershell\Modules\Get-DirectoryStats -Force
 
-}
 function Optimize-GitRepo {
   [CmdletBinding()]
   param (
@@ -31,24 +18,6 @@ function Optimize-GitRepo {
   )
 
   begin {
-    function Get-DirectoryStats {
-      param( $Directory, $Recurse)
-
-      $files = $Directory | Get-ChildItem -Force -Recurse:$Recurse | Where-Object { -not $_.PSIsContainer }
-      if ( $files ) {
-        $output = $files | Measure-Object -Sum -Property Length | Select-Object `
-        @{Name = "Path"; Expression = { $Directory.FullName } },
-        @{Name = "Files"; Expression = { $_.Count; $script:totalcount += $_.Count } },
-        @{Name = "Size"; Expression = { $_.Sum; $script:totalbytes += $_.Sum } }
-      }
-      else {
-        $output = "" | Select-Object `
-        @{Name = "Path"; Expression = { $Directory.FullName } },
-        @{Name = "Files"; Expression = { 0 } },
-        @{Name = "Size"; Expression = { 0 } }
-      }
-      $output
-    }
     $count = 0
     $sizeSumBefore = 0
     $sizeSumAfter = 0
@@ -58,7 +27,7 @@ function Optimize-GitRepo {
     Get-ChildItem -Path $Path -Filter ".git" -Recurse:$Recurse -Force -Attributes Directory |
     Where-Object {
       $count++
-      $sizeBefore = Get-DirectoryStats -Directory $_
+      $sizeBefore = Get-DirectoryStats -Directory $_.FullName
       $sizeSumBefore += $sizeBefore.Size
       Push-Location -Path $_.Parent.FullName
       Write-Host "Optimizing $((Get-Location).Path) ..." -ForegroundColor Blue
@@ -78,10 +47,13 @@ function Optimize-GitRepo {
   }
 
   end {
-  Write-Host "$count directories optimized by $(Get-ByteSize -Size ($sizeSumBefore - $sizeSumAfter))." -ForegroundColor Green
+  Write-Host "$count directories optimized." -ForegroundColor Green
+  Write-Host "Full size was $(Get-ByteSize -Size $sizeSumBefore )." -ForegroundColor Green
+  Write-Host "Full size is  $(Get-ByteSize -Size $sizeSumAfter)." -ForegroundColor Green
+  Write-Host "Reduced size  $(Get-ByteSize -Size ($sizeSumBefore - $sizeSumAfter))." -ForegroundColor Green
   }
 }
 
-# Optimize-GitRepo -Path $(Join-Path $env:HOME "dev") -Recurse:$true | Format-Table -Property Path,SizeAfter,ReducedSize
+#  Optimize-GitRepo -Path $(Join-Path $env:HOME "dev") -Recurse:$true | Format-Table -Property Path,SizeAfter,ReducedSize
 # ($(12312*1024*1024*1024*1024), $(234*1024*1024*1024), 234234234234, 34445, 5) | Get-ByteSize
 Optimize-GitRepo -Path $Path -Recurse:$Recurse | Format-Table -Property Path,SizeAfter,ReducedSize

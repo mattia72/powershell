@@ -232,6 +232,8 @@ function Save-SymbolicLinks {
     Write-Host "Symbolic links are saved from $SearchPath to $BackupPath successfully." -ForegroundColor Green
   }
 }
+
+Import-Module ${env:HOME}\dev\powershell\Modules\Get-DirectoryStats -Force
 $BackupDir = "$env:USERPROFILE\Box Sync\backup"
 
 $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1")
@@ -266,6 +268,11 @@ $ExclFiles = @(
 
 Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$BackupDir\home" -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
 
-Write-Host "Backup updated in $BackupDir successfully." -ForegroundColor Green
+$backupSize = $(Get-ByteSize -Size  $(Get-DirectoryStats -Directory $BackupDir -Recurse).Size)
+Write-Host "Backup updated in " -ForegroundColor Green -NoNewline
+Write-Host "$BackupDir " -ForegroundColor Blue -NoNewline
+Write-Host "successfully. Its size is " -ForegroundColor Green -NoNewline
+Write-Host "$backupSize" -ForegroundColor Yellow 
+
 Read-Host "Press enter to exit"
 
