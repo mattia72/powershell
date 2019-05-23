@@ -93,7 +93,7 @@ function Copy-WithRobocopy {
     # $what = @("/COPYALL", "/B", "/MIR")
     $what = @("/MIR")
     # $options = @("/NFL", "/NDL")
-    $options = @("/ETA", "/Z")
+    $options = @("/ETA", "/Z", "/NFL")
 
     $exclFiles = @()
     if ($ExcludeFiles.Count -gt 0) {
@@ -159,7 +159,7 @@ function Save-EnvVarsBackup {
     Out-File -FilePath $BackupPath  -Append
   }
   end {
-    Write-Host "EnvVars saved to $BackupPath successfully."
+    Write-Host "EnvVars saved to $BackupPath successfully." -ForegroundColor Green
   }
 }
 
@@ -181,7 +181,7 @@ function Save-ChocoBackup {
     Out-File -FilePath $BackupPath -Append
   }
   end {
-    Write-Host "EnvVars saved to $BackupPath successfully."
+    Write-Host "Choco install packages are saved to $BackupPath successfully." -ForegroundColor Green
   }
 }
 
@@ -229,6 +229,7 @@ function Save-SymbolicLinks {
 
   }
   end {
+    Write-Host "Symbolic links are saved from $SearchPath to $BackupPath successfully." -ForegroundColor Green
   }
 }
 $BackupDir = "$env:USERPROFILE\Box Sync\backup"
@@ -238,7 +239,7 @@ Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup
 Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE"
 Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME"
 
-.\Optimize-GitRepo -Path $env:HOME -Recurse
+.\Optimize-GitRepo -Path "$env:HOME" -Recurse
 
 ########################
 # ROBOCOPY
@@ -264,3 +265,7 @@ $ExclFiles = @(
 )
 
 Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$BackupDir\home" -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+
+Write-Host "Backup updated in $BackupDir successfully." -ForegroundColor Green
+Read-Host "Press enter to exit"
+
