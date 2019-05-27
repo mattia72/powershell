@@ -44,11 +44,11 @@ begin {
         "AGSRC",
         #"EDITOR",
         "HOME",
-        "MSYSHOME",
-        "MSYSROOT",
-        "MYEDITOR",
+        # "MSYSHOME",
+        # "MSYSROOT",
+        # "MYEDITOR",
         "MYVIMRC",
-        "PUTTYPATH",
+        # "PUTTYPATH",
         "TEMP",
         "TMP",
         "VIMPATH",
@@ -56,7 +56,7 @@ begin {
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
         "CLINK_DIR",
-        "CLINK_ROOT",
+        # "CLINK_ROOT",
         "MYVIMRC")
     } 
   }
@@ -120,6 +120,31 @@ begin {
     }
   }
 
+  function Save-ScheduledTasks {
+    [CmdletBinding()]
+    param (
+      [String] $BackupPath = $(Join-Path '.' 'Restore-ScheduledTasks.ps1') 
+    )
+    begin {
+      # $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+      "#Scheduled tasks backup $(Get-Date)" | Out-File -FilePath $BackupPath 
+      $BackupDir = $(Get-Item $BackupPath).DirectoryName
+    }
+
+    process {
+      Get-ScheduledTask -TaskPath \MyTasks\ | Foreach-Object { 
+        $backupTaskXml = $(Join-Path $BackupDir "$($_.TaskName)-ScheduledTask.xml")
+        Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
+        Out-File -FilePath $backupTaskXml
+        "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName $($_.TaskName) -Xml $(Get-Content $backupTaskXml | Out-String)" | Out-File -FilePath $BackupPath -Append
+        Write-Host "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
+      }
+    }
+    end {
+      Write-Host "Scheduled tasks are saved to $BackupPath successfully." -ForegroundColor Green
+    }
+  }
+
   function Save-SymbolicLinks {
     [CmdletBinding()]
     param (
@@ -173,18 +198,16 @@ begin {
 process {
   $ErrorActionPreference = "Stop"
   $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1")
-  Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup.ps1")
+  if ($ParamSetName -eq "Home") {
+    Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup.ps1")
+  }
+  
   Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE"
   Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME"
+  Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1")
 
-  Get-ScheduledTask -TaskPath \MyTasks\ | Foreach-Object { 
-    $backupTaskXml = $(Join-Path $BackupDir "$($_.TaskName)-ScheduledTask.xml")
-    Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
-    Out-File -FilePath $backupTaskXml
-    Write-Host "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
-  }
 
-  .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary | Format-Table -Property Path,SizeBefore,SizeAfter,Reduced
+  .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary | Format-Table -Property Path, SizeBefore, SizeAfter, Reduced
 
   ########################
   # ROBOCOPY
@@ -211,7 +234,7 @@ process {
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
   .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$BackupDir\home" -What $what -Options $options `
-      -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+    -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
 }
 
 end {
