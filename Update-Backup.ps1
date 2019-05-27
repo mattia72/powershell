@@ -7,7 +7,8 @@ param (
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User")]
   [string] $BackupDir = $(Get-Location).Path,
   [parameter(Position = 1, Mandatory = $false, ParameterSetName = "User")]
-  [string[]] $EnvVarsToBackup
+  [string[]] $EnvVarsToBackup,
+  [switch] $WaitInTheEnd
 )
 
 begin {
@@ -238,6 +239,8 @@ end {
   Write-Host "$BackupDir " -ForegroundColor Blue -NoNewline
   Write-Host "successfully. Its size is " -ForegroundColor Green -NoNewline
   Write-Host "$backupSize" -ForegroundColor Yellow 
-  Read-Host "Press enter to exit"
+  if ($WaitInTheEnd) {
+    Read-Host "Press enter to exit"
+  }
 }
 
