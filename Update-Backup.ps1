@@ -38,7 +38,11 @@ begin {
     Work {  
       $BackupDir = "s:\Backup_All\"
       $EnvVarsToBackup = (
-        "EDITOR",
+        "AG32TEST",
+        "AG32UNITTEST",
+        "AGRTM",
+        "AGSRC",
+        #"EDITOR",
         "HOME",
         "MSYSHOME",
         "MSYSROOT",
@@ -48,6 +52,7 @@ begin {
         "TEMP",
         "TMP",
         "VIMPATH",
+        "NVIMPATH",
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
         "CLINK_DIR",
