@@ -28,13 +28,13 @@ function Get-DirectoryStats {
     if ( $files ) {
       $output = $files | Measure-Object -Sum -Property Length | Select-Object `
       @{Name = "Path"; Expression = { $Directory } },
-      @{Name = "Files"; Expression = { $_.Count; $script:totalcount += $_.Count } },
+      @{Name = "Count"; Expression = { $_.Count; $script:totalcount += $_.Count } },
       @{Name = "Size"; Expression = { $_.Sum; $script:totalbytes += $_.Sum } }
     }
     else {
       $output = "" | Select-Object `
       @{Name = "Path"; Expression = { $Directory } },
-      @{Name = "Files"; Expression = { 0 } },
+      @{Name = "Count"; Expression = { 0 } },
       @{Name = "Size"; Expression = { 0 } }
     }
     $output
