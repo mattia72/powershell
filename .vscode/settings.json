@@ -1,4 +1,4 @@
 {
   //powershell words begins with $ and has - in 
-  "editor.wordSeparators": "`~!@#%^&*()=+[{]}\\|;:'\",.<>/?"
+  "editor.wordSeparators": "`~!$_@#%^&*()=+[{]}\\|;:'\",.<>/?",
 }
