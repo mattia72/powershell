@@ -16,7 +16,7 @@ function Optimize-GitRepo {
     [ValidateScript( { ((Test-Path -Path $_) -and ((Get-Item $_) -is [System.IO.DirectoryInfo])) })]
     [String]$Path = (get-location).Path,
     [switch]$Recurse,
-    [switch]$WriteSumary
+    [switch]$WriteSummary
   )
 
   begin {
@@ -30,14 +30,14 @@ function Optimize-GitRepo {
     ForEach-Object {
       $count++
       $sizeBefore = $(Get-DirectoryStats -Directory $_.FullName).Size
-      $sizeSumBefore += $sizeBefore.Size
+      $sizeSumBefore += $sizeBefore
       Push-Location -Path $_.Parent.FullName
       Write-Host "Optimizing $((Get-Location).Path) ..." -ForegroundColor Blue
       git reflog expire --all --expire=now
       git gc --prune=now --aggressiv
       Pop-Location
       $sizeAfter = $(Get-DirectoryStats -Directory $_).Size
-      $sizeSumAfter += $sizeAfter.Size
+      $sizeSumAfter += $sizeAfter
       $reducedSize = $sizeBefore - $sizeAfter
       # Write-Host "Optimized by $(Get-ByteSize -Size $reducedSize)" -ForegroundColor Blue
 

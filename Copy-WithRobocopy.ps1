@@ -51,7 +51,6 @@ param(
     [string] $SrcPath,
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipelineByPropertyName = $true,
       HelpMessage = "Destination directory")]
-    [ValidateScript( { ((Test-Path -Path $_) -and ((Get-Item $_) -is [System.IO.DirectoryInfo])) })]
     [Alias("DestinationDirectory")]
     [string] $DestPath,
     [string[]] $What = @('/MIR'),
@@ -79,7 +78,6 @@ function Copy-WithRobocopy {
     [string] $SrcPath,
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipelineByPropertyName = $true,
       HelpMessage = "Destination directory")]
-    [ValidateScript( { ((Test-Path -Path $_) -and ((Get-Item $_) -is [System.IO.DirectoryInfo])) })]
     [Alias("DestinationDirectory")]
     [string] $DestPath,
     [string[]] $What = @('/MIR'),

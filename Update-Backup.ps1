@@ -136,7 +136,7 @@ begin {
         $backupTaskXml = $(Join-Path $BackupDir "$($_.TaskName)-ScheduledTask.xml")
         Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
         Out-File -FilePath $backupTaskXml
-        "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName $($_.TaskName) -Xml $(Get-Content $backupTaskXml | Out-String)" | Out-File -FilePath $BackupPath -Append
+        "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName `"$($_.TaskName)`" -Xml `"$(Get-Content $backupTaskXml | Out-String)`"" | Out-File -FilePath $BackupPath -Append
         Write-Host "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
       }
     }
@@ -198,42 +198,37 @@ begin {
 process {
   $ErrorActionPreference = "Stop"
   $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1")
-  if ($ParamSetName -eq "Home") {
-    Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup.ps1")
-  }
-  
   Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE"
   Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME"
   Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1")
 
-
   .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary | Format-Table -Property Path, SizeBefore, SizeAfter, Reduced
 
-  ########################
-  # ROBOCOPY
-  ########################
+  #Only at home
+  if ($ParamSetName -eq "Home") {
+    Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup.ps1")
 
-  $ExclDirs = @(
-    "downloads"
-    "vimfiles"
-    ".vim\plugged"
-    ".cache"
-  )
-
-  $ExclAllDirs = @(
-    # ".git" 
-    ".tmp.drivedownload" 
-    "*.vimview"
-  )
-
-  $ExclFiles = @(
-    "*.driveupload" 
-  )
+    $ExclDirs = @(
+      "downloads"
+      "vimfiles"
+      ".vim\plugged"
+      ".cache"
+    )
+    $ExclAllDirs = @(
+      # ".git" 
+      ".tmp.drivedownload" 
+      "*.vimview"
+    )
+    $ExclFiles = @( "*.driveupload" )
+  }
 
   $what = @("/MIR")
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
-  .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$BackupDir\home" -What $what -Options $options `
+  ########################
+  # ROBOCOPY
+  ########################
+  .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$(Join-Path $BackupDir "home")" -What $what -Options $options `
     -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
 }
 
