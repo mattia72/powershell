@@ -196,7 +196,7 @@ begin {
   function Write-LogError {
     [CmdletBinding()]
     param (
-      [String] $Error,
+      [String] $ErrorText,
       [String] $FilePrefix
     )
     begin {
@@ -204,7 +204,7 @@ begin {
       $logFileName = "$FilePrefix.$logTime.error.log"
     }
     process{
-      if ($Error) {
+      if ($ErrorText) {
         $ProcessError | Out-File $(Join-Path "$BackupDir" "$logFileName")
       }
     }
@@ -216,19 +216,19 @@ begin {
 process {
   # $ErrorActionPreference = "Stop"
   $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -Error $ProcessError -FilePrefix "EnvVarsBackup"
+  Write-LogError -ErrorText $ProcessError -FilePrefix "EnvVarsBackup"
 
   Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE" -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -Error $ProcessError -FilePrefix "SymbolicLinksInDocumentsBackup" 
+  Write-LogError -ErrorText $ProcessError -FilePrefix "SymbolicLinksInDocumentsBackup" 
 
   Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME" -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -Error $ProcessError -FilePrefix "SymbolicLinksInHomeBackup"
+  Write-LogError -ErrorText $ProcessError -FilePrefix "SymbolicLinksInHomeBackup"
 
   Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -Error $ProcessError -FilePrefix "ScheduledTaskBackup"
+  Write-LogError -ErrorText $ProcessError -FilePrefix "ScheduledTaskBackup"
 
   .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -Error $ProcessError -FilePrefix "OptimizeGetRepo"
+  Write-LogError -ErrorText $ProcessError -FilePrefix "OptimizeGetRepo"
 
   #Only at home
   if ($ParamSetName -eq "Home") {
@@ -252,7 +252,7 @@ process {
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
   ########################
-  # ROBOCOPY
+  #       ROBOCOPY       #
   ########################
   .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$(Join-Path $BackupDir "home")" -What $what -Options $options `
     -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
