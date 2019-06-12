@@ -193,17 +193,42 @@ begin {
       Write-Host "Symbolic links are saved from $SearchPath to $BackupPath successfully." -ForegroundColor Green
     }
   }
+  function Write-LogError {
+    [CmdletBinding()]
+    param (
+      [String] $Error,
+      [String] $FilePrefix
+    )
+    begin {
+      $logTime= $(Get-Date -uformat "%Y-%m-%d-%H-%M-%S")
+      $logFileName = "$FilePrefix.$logTime.error.log"
+    }
+    process{
+      if ($Error) {
+        $ProcessError | Out-File $(Join-Path "$BackupDir" "$logFileName")
+      }
+    }
+  }
+
 
   Import-Module ${env:HOME}\dev\powershell\Modules\Get-DirectoryStats -Force
 }
 process {
-  $ErrorActionPreference = "Stop"
-  $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1")
-  Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE"
-  Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME"
-  Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1")
+  # $ErrorActionPreference = "Stop"
+  $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
+  Write-LogError -Error $ProcessError -FilePrefix "EnvVarsBackup"
 
-  .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary | Format-Table -Property Path, SizeBefore, SizeAfter, Reduced
+  Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE" -ErrorAction Stop -ErrorVariable ProcessError;
+  Write-LogError -Error $ProcessError -FilePrefix "SymbolicLinksInDocumentsBackup" 
+
+  Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME" -ErrorAction Stop -ErrorVariable ProcessError;
+  Write-LogError -Error $ProcessError -FilePrefix "SymbolicLinksInHomeBackup"
+
+  Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
+  Write-LogError -Error $ProcessError -FilePrefix "ScheduledTaskBackup"
+
+  .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
+  Write-LogError -Error $ProcessError -FilePrefix "OptimizeGetRepo"
 
   #Only at home
   if ($ParamSetName -eq "Home") {
