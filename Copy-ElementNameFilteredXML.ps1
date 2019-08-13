@@ -7,7 +7,7 @@
   $ElementFilter 
 .EXAMPLE
   PS C:\> Copy-ElementFilteredXML input.xml output.xml 'parent_element_name' '^child_elem_(regex1|regex2)$'
-  Copy elements from iput.xml to output.xml while filtering 
+  Copy elements from input.xml to output.xml while filtering 
   child elements not match '^child_elem_(regex1|regex2)$' under parent_element_name
 .INPUTS
   Inputs (if any)
@@ -49,7 +49,7 @@ function Read-FilterAndWriteXml {
     # $writer.WriteProcessingInstruction("xml-stylesheet", "type='text/xsl' href='style.xsl'")
     $reader = [System.XML.XmlReader]::Create($SrcPath);
     # $reader.WhitespaceHandling = WhitespaceHandling.None;
-    $par_start_written = $false 
+    $parent_started = $false 
     while ( $reader.Read()) {
       # $dbg_msg = $reader.NodeType.ToString().PadRight(20, '-') 
       # $dbg_msg += $reader.NodeType.ToString().PadRight(20, '-') 
@@ -58,13 +58,13 @@ function Read-FilterAndWriteXml {
       # Write-Host $dbg_msg
       switch ($reader.NodeType) {
         'Element' { 
-          if ($par_start_written) {
+          if ($parent_started) {
             if ( $reader.Name -Match $Filter) {
               $writer.WriteNode($reader, $false)
             }
           }
           else {
-            $par_start_written = ( $reader.Name -eq $Parent) 
+            $parent_started = ( $reader.Name -eq $Parent) 
             if($reader.IsEmptyElement) {
               $writer.WriteNode($reader, $false)
             } else {
@@ -73,12 +73,12 @@ function Read-FilterAndWriteXml {
           }
         }
         'Text' {
-          if (-not $par_start_written) {
+          if (-not $parent_started) {
             $writer.WriteString($reader.Value)
           }
         }
         'CDATA' {
-          if (-not $par_start_written) {
+          if (-not $parent_started) {
             $writer.WriteCData($reader.Value)
           }
         }
@@ -98,10 +98,10 @@ function Read-FilterAndWriteXml {
           $writer.WriteNode($reader, $false)
         }
         'EndElement' {
-          if ($par_start_written -and $reader.Name -eq $Parent) {
-            $par_start_written = $false
+          if ($parent_started -and $reader.Name -eq $Parent) {
+            $parent_started = $false
           }  
-          if (-not $par_start_written) {
+          if (-not $parent_started) {
             $writer.WriteEndElement()
           }
         }
