@@ -256,6 +256,8 @@ process {
   ########################
   .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$(Join-Path $BackupDir "home")" -What $what -Options $options `
     -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+
+  .\Get-InstalledPrograms | Out-File -FilePath $(Join-Path $BackupDir "InstalledPrograms.txt") 
 }
 
 end {
