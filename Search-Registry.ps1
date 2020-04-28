@@ -6,6 +6,7 @@
     [string[]] $Path, 
     # Specifies whether or not all subkeys should also be searched 
     [switch] $Recurse, 
+    [switch] $Relative, 
     # A regular expression that will be checked against key names, value names, and value data (depending on the specified switches) 
     [Parameter(ParameterSetName = "SingleSearchString", Mandatory)] 
     [string] $SearchRegex, 
@@ -29,6 +30,18 @@
     [string] $ValueDataRegex 
   ) 
 
+function Create-Record {
+  param(
+    $Relative,
+    $Key,
+    $Value,
+    $Reason
+  )
+  if ($Relative) {
+    $Key = $Key | Resolve-Path -Relative
+  }
+  [PSCustomObject] @{ Reason = $Reason; Key = $Key; Value = $Value;  } 
+}
 function Search-Registry { 
   <# 
 .SYNOPSIS 
@@ -52,6 +65,7 @@ Search-Registry -Path HKLM:\SOFTWARE\Microsoft -Recurse -ValueNameRegex "ValueNa
     [string[]] $Path, 
     # Specifies whether or not all subkeys should also be searched 
     [switch] $Recurse, 
+    [switch] $Relative, 
     [Parameter(ParameterSetName = "SingleSearchString", Mandatory)] 
     # A regular expression that will be checked against key names, value names, and value data (depending on the specified switches) 
     [string] $SearchRegex, 
@@ -86,9 +100,7 @@ Search-Registry -Path HKLM:\SOFTWARE\Microsoft -Recurse -ValueNameRegex "ValueNa
         if ($ValueName -or $NoSwitchesSpecified) { $ValueNameRegex = $SearchRegex } 
         if ($ValueData -or $NoSwitchesSpecified) { $ValueDataRegex = $SearchRegex } 
       } 
-      MultipleSearchStrings { 
-        # No extra work needed 
-      } 
+      MultipleSearchStrings { }
     } 
     $GetChildItemError = ''
     $CurrentLocation = Get-Location
@@ -100,49 +112,32 @@ Search-Registry -Path HKLM:\SOFTWARE\Microsoft -Recurse -ValueNameRegex "ValueNa
       Get-ChildItem . -Recurse:$Recurse -ErrorVariable +GetChildItemError |  
         ForEach-Object { 
           $Key = $_ 
+          $Reason = ''
 
           if ($KeyNameRegex) {  
-            Write-Verbose ("{0}: Checking KeyNamesRegex" -f $Key.Name)  
-
             if ($Key.PSChildName -match $KeyNameRegex) {  
               Write-Verbose "$_  -> Match found!" 
-              return [PSCustomObject] @{ 
-                Key   = $Key | Resolve-Path -Relative
-                Value = $_
-                Reason = "KeyName" 
-              } 
+              $Value = $Key.PSChildName
+              $Reason = "KeyName" 
+              Create-Record -Relative $Relative -Key $Key -Value $Value -Reason $Reason
             }  
           } 
-
-          if ($ValueNameRegex) {  
-            Write-Verbose ("{0}: Checking ValueNamesRegex" -f $Key.Name) 
-
-            if (($Key.GetValueNames() | ForEach-Object { 
-                $Name = $_
-                $Name
-                }) -match $ValueNameRegex) {  
-            Write-Verbose "$Name  -> Match found!" 
-            return [PSCustomObject] @{ 
-                Key   = $Key | Resolve-Path -Relative
-                Value = $Name
-                Reason = "ValueName" 
-              } 
+          if (-not $Reason -and $ValueNameRegex) {  
+            $Key.GetValueNames() | ForEach-Object { 
+              if($_ -match $ValueNameRegex) {
+                Write-Verbose "$_  -> Match found!" 
+                Create-Record -Relative $Relative -Key $Key -Value $_ -Reason "ValueName"
+              }
             }  
           } 
-
-          if ($ValueDataRegex) {  
-            Write-Verbose ("{0}: Checking ValueDataRegex" -f $Key.Name) 
-
-            if (($Key.GetValueNames() | ForEach-Object { 
+          if (-not $Reason -and $ValueDataRegex) {  
+            $Key.GetValueNames() | ForEach-Object { 
                 $Value = $Key.GetValue($_) 
-                $Value
-              }) -match $ValueDataRegex) {  
-              Write-Verbose "$Value  -> Match!" 
-              return [PSCustomObject] @{ 
-                Key   = $Key | Resolve-Path -Relative
-                Value = $Value
-                Reason = "ValueData" 
-              } 
+                if ($Value -match $ValueNameRegex) {  
+                  Write-Verbose "$Value  -> Match!" 
+                  $Reason = "ValueData" 
+                  Create-Record -Relative $Relative -Key $Key -Value $Value -Reason $Reason
+                }
             } 
           } 
         } 
@@ -150,7 +145,9 @@ Search-Registry -Path HKLM:\SOFTWARE\Microsoft -Recurse -ValueNameRegex "ValueNa
     } 
   } 
   end{
-    Write-Host "$GetChildItemError"
+    if ($GetChildItemError) {
+      Write-Host $GetChildItemError
+    }
     Set-Location $CurrentLocation 
   }
 } 
@@ -160,6 +157,7 @@ switch ($PSCmdlet.ParameterSetName) {
     Search-Registry                     `
       -Path $Path                     `
       -Recurse:$Recurse               `
+      -Relative:$Relative               `
       -SearchRegex $SearchRegex       `
       -KeyName:$KeyName               `
       -ValueName:$ValueName           `
@@ -169,6 +167,7 @@ switch ($PSCmdlet.ParameterSetName) {
     Search-Registry                     `
       -Path $Path                     `
       -Recurse:$Recurse               `
+      -Relative:$Relative               `
       -KeyNameRegex $KeyNameRegex     `
       -ValueNameRegex $ValueNameRegex `
       -ValueDataRegex $ValueDataRegex 
