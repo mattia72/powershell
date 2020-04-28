@@ -28,6 +28,7 @@ begin {
         "TEMP",
         "TMP",
         "VIMPATH",
+        "NVIMPATH",
         "WIX",
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
