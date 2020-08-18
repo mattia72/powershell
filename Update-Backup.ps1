@@ -113,7 +113,7 @@ begin {
 
     process {
       choco list -l | 
-      Select-String -Pattern '^([\w.]+) [\d.]+$' |
+      Select-String -Pattern '^([\w.-]+) [\d.]+$' |
       ForEach-Object { "choco install $($_.Matches.Groups[1].Value) -y" } | 
       Out-File -FilePath $BackupPath -Append
     }
