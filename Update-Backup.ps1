@@ -173,7 +173,7 @@ begin {
         $backupTaskXml = $(Join-Path $BackupDir "$($_.TaskName)-ScheduledTask.xml")
         Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
         Out-File -FilePath $backupTaskXml
-        "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName `"$($_.TaskName)`" -Xml `"$(Get-Content $backupTaskXml | Out-String)`"" | Out-File -FilePath $BackupPath -Append
+        "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName `"$($_.TaskName)`" -Xml '$(Get-Content $backupTaskXml | Out-String)'" | Out-File -FilePath $BackupPath -Append
         Write-Host "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
       }
     }

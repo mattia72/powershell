@@ -6,9 +6,14 @@
   while filtering child elements of $ParentElement not match 
   $ElementFilter 
 .EXAMPLE
-  PS C:\> Copy-ElementFilteredXML input.xml output.xml 'parent_element_name' '^child_elem_(regex1|regex2)$'
+  PS C:\> Copy-FilteredXML input.xml output.xml 'parent' '^child(2|some_regex)$'
   Copy elements from input.xml to output.xml while filtering 
-  child elements not match '^child_elem_(regex1|regex2)$' under parent_element_name
+  child elements not match regex '^child(2|some_regex)$' under 'parent'
+  input:                     | output: 
+    <parent>                 |   <parent>
+      <child1>value<\child1> |     <child1>value<\child1>
+      <child2>value<\child2> |   <\parent>
+    <\parent>                |
 .INPUTS
   Inputs (if any)
 .OUTPUTS
