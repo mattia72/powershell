@@ -4,6 +4,8 @@ param (
   [switch] $SetHomeParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Work")]
   [switch] $SetWorkParams,
+  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Marktsoft")]
+  [switch] $SetMarktsoftParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User")]
   [string] $BackupDir = $(Get-Location).Path,
   [parameter(Position = 1, Mandatory = $false, ParameterSetName = "User")]
@@ -33,7 +35,31 @@ begin {
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
         "CLINK_DIR",
-        "CLINK_ROOT",
+        # "CLINK_ROOT",
+        "CLINK_PROFILE",
+        "ChocolateyToolsLocation", 
+        "MYVIMRC")
+    }
+    Marktsoft {  
+      $BackupDir = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
+      $EnvVarsToBackup = (
+        "EDITOR",
+        "HOME",
+        "MSYSHOME",
+        "MSYSROOT",
+        "MYEDITOR",
+        "MYVIMRC",
+        "PUTTYPATH",
+        "TEMP",
+        "TMP",
+        "VIMPATH",
+        "NVIMPATH",
+        "WIX",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "CLINK_DIR",
+        # "CLINK_ROOT",
+        "CLINK_PROFILE",
         "ChocolateyToolsLocation", 
         "MYVIMRC")
     }
@@ -58,6 +84,7 @@ begin {
         "XDG_CONFIG_HOME",
         "XDG_DATA_HOME",
         "CLINK_DIR",
+        "CLINK_PROFILE",
         # "CLINK_ROOT",
         "MYVIMRC")
     } 
@@ -72,7 +99,15 @@ begin {
     begin { }
     process {
       foreach ($item in $EnvVars) {
-        Get-Item "env:$($item)" 
+        try {
+          Get-Item "env:$($item)"  -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ItemNotFoundException] {
+          Write-Host "Environment variable '$item' not found." -ForegroundColor Yellow
+        }
+        catch {
+          Write-Host "Unexpected error on '$item'" -ForegroundColor Yellow
+        }
       }
     }
     end { }
