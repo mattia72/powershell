@@ -1,4 +1,3 @@
-
 [CmdletBinding()] 
 Param (
     [Parameter(Mandatory = $True, ValueFromPipelineByPropertyName = $True)] 
@@ -21,3 +20,5 @@ Write-Progress -Activity "Check Encoding" -Completed
 #Clear-Host
 $NonAsciiFiles | Format-Table -AutoSize 
 Write-Host "$($($NonAsciiFiles | Measure-Object).Count) from $i file found."
+
+Clear-Variable NonAsciiFiles
