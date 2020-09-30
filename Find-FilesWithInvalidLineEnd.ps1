@@ -18,9 +18,10 @@ Get-ChildItem $Path -Include *.pas, *.dfm -Recurse |
       $lf -or $cr
     } | 
     Select-Object FullName, @{Name = 'EOL'; Expression = {if ($lf) {'LF'} elseif ($cr) {'CR'} else {'??'}}} |
-    Tee-Object -Variable FilesWithInvalidEOL | Out-Null
+    Tee-Object -Variable FilesWithInvalidEOL | 
+    Out-Null
 
-Write-Progress -Activity "Check Encoding" -Completed 
+Write-Progress -Activity "Check End of Lines" -Completed 
 
 #Clear-Host
 $FilesWithInvalidEOL | Format-Table -AutoSize 

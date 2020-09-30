@@ -13,7 +13,8 @@ Get-ChildItem $Path -Include *.pas, *.dfm -Recurse |
         $(.\Get-FileEncoding $_.FullName) -ne 'ascii'
     } | 
     Select-Object FullName, @{Name = 'Encoding'; Expression = { .\Get-FileEncoding $_.FullName } } |
-    Tee-Object -Variable NonAsciiFiles | Out-Null
+    Tee-Object -Variable NonAsciiFiles | 
+    Out-Null
 
 Write-Progress -Activity "Check Encoding" -Completed 
 
