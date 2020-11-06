@@ -6,19 +6,25 @@ param (
   [switch] $SetWorkParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Marktsoft")]
   [switch] $SetMarktsoftParams,
-  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User")]
-  [string] $BackupDir = $(Get-Location).Path,
+  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User", HelpMessage = "Source directory of the backup")]
+  [string] $BackupSrc,
   [parameter(Position = 1, Mandatory = $false, ParameterSetName = "User")]
+  [string] $BackupDest = $(Get-Location).Path,
+  [parameter(Position = 2, Mandatory = $false, ParameterSetName = "User")]
   [string[]] $EnvVarsToBackup,
   [switch] $WaitInTheEnd
 )
 
 begin {
 
+  $DoNotBackupDirFileName = ".DO_NOT_BACKUP_THIS_DIR"
+  $DoNotBackupAnyDirName = ".DO_NOT_BACKUP_ANY"
+
   $ParamSetName = $PSCmdlet.ParameterSetName
   switch ($ParamSetName) {
     Home {  
-      $BackupDir = "$env:USERPROFILE\Box Sync\backup"
+      $BackupSrc = "$env:HOME" 
+      $BackupDest = "$env:USERPROFILE\Box Sync\backup"
       $EnvVarsToBackup = (
         "EDITOR",
         "HOME",
@@ -37,11 +43,13 @@ begin {
         "CLINK_DIR",
         # "CLINK_ROOT",
         "CLINK_PROFILE",
+        "PSModulePath",
         "ChocolateyToolsLocation", 
         "MYVIMRC")
     }
     Marktsoft {  
-      $BackupDir = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
+      $BackupSrc = "$env:HOME" 
+      $BackupDest = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
       $EnvVarsToBackup = (
         "EDITOR",
         "HOME",
@@ -60,11 +68,13 @@ begin {
         "CLINK_DIR",
         # "CLINK_ROOT",
         "CLINK_PROFILE",
+        "PSModulePath",
         "ChocolateyToolsLocation", 
         "MYVIMRC")
     }
     Work {  
-      $BackupDir = "s:\Backup_All\"
+      $BackupSrc = "$env:HOME" 
+      $BackupDest = "s:\Backup_All\"
       $EnvVarsToBackup = (
         "AG32TEST",
         "AG32UNITTEST",
@@ -165,12 +175,12 @@ begin {
     begin {
       # $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
       "#Scheduled tasks backup $(Get-Date)" | Out-File -FilePath $BackupPath 
-      $BackupDir = $(Get-Item $BackupPath).DirectoryName
+      $BackupDest = $(Get-Item $BackupPath).DirectoryName
     }
 
     process {
       Get-ScheduledTask -TaskPath \MyTasks\ | Foreach-Object { 
-        $backupTaskXml = $(Join-Path $BackupDir "$($_.TaskName)-ScheduledTask.xml")
+        $backupTaskXml = $(Join-Path $BackupDest "$($_.TaskName)-ScheduledTask.xml")
         Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
         Out-File -FilePath $backupTaskXml
         "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName `"$($_.TaskName)`" -Xml '$(Get-Content $backupTaskXml | Out-String)'" | Out-File -FilePath $BackupPath -Append
@@ -241,26 +251,39 @@ begin {
     }
     process{
       if ($ErrorText) {
-        $ProcessError | Out-File $(Join-Path "$BackupDir" "$logFileName")
+        $ProcessError | Out-File $(Join-Path "$BackupDest" "$logFileName")
       }
     }
   }
 
+  function Find-ExcludeDirs {
+    param (
+      [String] $Path,
+      [String] $DoNotBackupDirFileName
+    )
+    Push-Location $Path | Out-Null
+    Find-Files $Path $DoNotBackupDirFileName -MatchFullName -UseEverything |  
+      ForEach-Object { $(Resolve-Path -Relative $_.Directory) -replace "^\.\\", "" }     
+    Pop-Location | Out-Null
+  }
 
-  Import-Module ${env:HOME}\dev\powershell\Modules\Get-DirectoryStats -Force
+# PSModulePath should be set!
+  Import-Module Get-DirectoryStats -Force
+  Import-Module Find-Everything -Force
+
 }
 process {
   # $ErrorActionPreference = "Stop"
-  $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDir "Restore-EnvVarsBackup.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
+  $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDest "Restore-EnvVarsBackup.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "EnvVarsBackup"
 
-  Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE" -ErrorAction Stop -ErrorVariable ProcessError;
+  Save-SymbolicLinks -SearchPath "$env:USERPROFILE\Documents" -BackupPath $(Join-Path $BackupDest "Restore-SymbolicLinks.ps1") -ReplaceEnv "USERPROFILE" -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "SymbolicLinksInDocumentsBackup" 
 
-  Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDir "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME" -ErrorAction Stop -ErrorVariable ProcessError;
+  Save-SymbolicLinks -SearchPath "$env:HOME" -BackupPath $(Join-Path $BackupDest "Restore-SymbolicLinks.ps1") -Append -ReplaceEnv "HOME" -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "SymbolicLinksInHomeBackup"
 
-  Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDir "Restore-ScheduledTasks.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
+  Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDest "Restore-ScheduledTasks.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "ScheduledTaskBackup"
 
   .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
@@ -268,7 +291,7 @@ process {
 
   #Only at home
   if ($ParamSetName -eq "Home") {
-    Save-ChocoBackup -BackupPath  $(Join-Path $BackupDir "Restore-ChocoInstallBackup.ps1")
+    Save-ChocoBackup -BackupPath  $(Join-Path $BackupDest "Restore-ChocoInstallBackup.ps1")
 
     $ExclDirs = @(
       "downloads"
@@ -276,6 +299,9 @@ process {
       ".vim\plugged"
       ".cache"
     )
+
+    $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
+
     $ExclAllDirs = @(
       # ".git" 
       ".tmp.drivedownload" 
@@ -290,16 +316,16 @@ process {
   ########################
   #       ROBOCOPY       #
   ########################
-  .\Copy-WithRobocopy -SrcPath "$env:HOME" -DestPath "$(Join-Path $BackupDir "home")" -What $what -Options $options `
+  .\Copy-WithRobocopy -SrcPath $BackupSrc -DestPath "$(Join-Path $BackupDest "home")" -What $what -Options $options `
     -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
 
-  .\Get-InstalledPrograms | Out-File -FilePath $(Join-Path $BackupDir "InstalledPrograms.txt") 
+  .\Get-InstalledPrograms | Out-File -FilePath $(Join-Path $BackupDest "InstalledPrograms.txt") 
 }
 
 end {
-  $backupSize = $(Get-ByteSize -Size  $(Get-DirectoryStats -Directory $BackupDir -Recurse).Size)
+  $backupSize = $(Get-ByteSize -Size  $(Get-DirectoryStats -Directory $BackupDest -Recurse).Size)
   Write-Host "Backup updated in " -ForegroundColor Green -NoNewline
-  Write-Host "$BackupDir " -ForegroundColor Blue -NoNewline
+  Write-Host "$BackupDest " -ForegroundColor Blue -NoNewline
   Write-Host "successfully. Its size is " -ForegroundColor Green -NoNewline
   Write-Host "$backupSize" -ForegroundColor Yellow 
   if ($WaitInTheEnd) {

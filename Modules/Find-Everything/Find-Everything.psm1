@@ -6,7 +6,8 @@ function Find-Files {
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
       HelpMessage = "File name or part of file name, wildcards are not supported")]
     [string] $FileName,
-    [switch] $UseEverything = $false
+    [switch] $MatchFullName,
+    [switch] $UseEverything
   )
   
   # use everything for search if exists in the path
@@ -17,12 +18,14 @@ function Find-Files {
   }
   
   if ($UseEverything -and $EverythingFound) {
+    $SearchExpr = $(if ($MatchFullName) { "regex:\$FileName$" } else { $FileName })
     Write-Verbose "File search performed by everything"
-    es.exe -path $Path $FileName | Get-Item
+    es.exe -path $Path "$SearchExpr" | Get-Item
   }
   else {
     Write-Verbose "File search performed by powershell"
-    Get-ChildItem -Recurse -Path $Path -Include ("*$FileName*") #| Sort-Object -Property LastWriteTime -Descending
+    $SearchExpr = $(if ($MatchFullName) { "$FileName" } else { "*$FileName*" })
+    Get-ChildItem -Recurse -Path $Path -Include ("$SearchExpr*") #| Sort-Object -Property LastWriteTime -Descending
   }
 }
 
