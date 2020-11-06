@@ -293,12 +293,12 @@ process {
   if ($ParamSetName -eq "Home") {
     Save-ChocoBackup -BackupPath  $(Join-Path $BackupDest "Restore-ChocoInstallBackup.ps1")
 
-    $ExclDirs = @(
-      "downloads"
-      "vimfiles"
-      ".vim\plugged"
-      ".cache"
-    )
+    # $ExclDirs = @(
+    #   "downloads"
+    #   "vimfiles"
+    #   ".vim\plugged"
+    #   ".cache"
+    # )
 
     $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
 
