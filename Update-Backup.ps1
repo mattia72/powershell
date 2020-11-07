@@ -18,7 +18,10 @@ param (
 begin {
 
   $DoNotBackupDirFileName = ".DO_NOT_BACKUP_THIS_DIR"
-  $DoNotBackupAnyDirName = ".DO_NOT_BACKUP_ANY"
+ # $DoNotBackupAnyDirName = ".DO_NOT_BACKUP_ANY"
+
+ # $LogFile = "Backup_$(Get-Date -uformat "%Y-%m-%d-%H-%M-%S").log"
+  $LogFile = "backup.log"
 
   $ParamSetName = $PSCmdlet.ParameterSetName
   switch ($ParamSetName) {
@@ -113,10 +116,10 @@ begin {
           Get-Item "env:$($item)"  -ErrorAction Stop
         }
         catch [System.Management.Automation.ItemNotFoundException] {
-          Write-Host "Environment variable '$item' not found." -ForegroundColor Yellow
+          Write-Log $LogFile "Environment variable '$item' not found." -ForegroundColor Yellow
         }
         catch {
-          Write-Host "Unexpected error on '$item'" -ForegroundColor Yellow
+          Write-Log $LogFile "Unexpected error on '$item'" -ForegroundColor Yellow
         }
       }
     }
@@ -141,7 +144,7 @@ begin {
       Out-File -FilePath $BackupPath  -Append
     }
     end {
-      Write-Host "EnvVars saved to $BackupPath successfully." -ForegroundColor Green
+      Write-Log $LogFile "EnvVars saved to $BackupPath successfully." -ForegroundColor Green
     }
   }
 
@@ -163,7 +166,7 @@ begin {
       Out-File -FilePath $BackupPath -Append
     }
     end {
-      Write-Host "Choco install packages are saved to $BackupPath successfully." -ForegroundColor Green
+      Write-Log $LogFile "Choco install packages are saved to $BackupPath successfully." -ForegroundColor Green
     }
   }
 
@@ -184,11 +187,11 @@ begin {
         Export-ScheduledTask $(Join-Path $_.TaskPath $_.TaskName) |
         Out-File -FilePath $backupTaskXml
         "Register-ScheduledTask -TaskPath \MyTasks\ -TaskName `"$($_.TaskName)`" -Xml '$(Get-Content $backupTaskXml | Out-String)'" | Out-File -FilePath $BackupPath -Append
-        Write-Host "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
+        Write-Log $LogFile "Scheduled Task: `"$($_.TaskName)`" saved to `"$backupTaskXml`"." -ForegroundColor Green
       }
     }
     end {
-      Write-Host "Scheduled tasks are saved to $BackupPath successfully." -ForegroundColor Green
+      Write-Log $LogFile "Scheduled tasks are saved to $BackupPath successfully." -ForegroundColor Green
     }
   }
 
@@ -236,7 +239,37 @@ begin {
 
     }
     end {
-      Write-Host "Symbolic links are saved from $SearchPath to $BackupPath successfully." -ForegroundColor Green
+      Write-Log $LogFile "Symbolic links are saved from $SearchPath to $BackupPath successfully." -ForegroundColor Green
+    }
+  }
+  
+  function Write-Log {
+    [CmdletBinding()]
+    param (
+      [Parameter(Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
+        HelpMessage = "Logfile name prefix")]
+      [string] $LogFileName,
+      [Parameter(Position = 1, Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
+        HelpMessage = "Text of log entry")]
+      [string] $Text,
+      [Parameter(Position = 3, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+        HelpMessage = "Foreground color of text on console")]
+      [ConsoleColor] $ForegroundColor,
+      [Parameter(Position = 4, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+        HelpMessage = "No new line after entry")]
+      [switch] $NoNewline
+    )
+    begin {
+      if ($LogFileName.Length -eq 0) {
+        $logTime = $(Get-Date -uformat "%Y-%m-%d-%H-%M-%S")
+        $LogFileName = "$($MyInvocation.MyCommand.Name).$logTime.log"
+      }
+    }
+    process {
+      if ($Text) {
+        $Text | Out-File $(Join-Path "$BackupDest" "$LogFileName") -Append
+      }
+      Write-Host $Text -ForegroundColor $ForegroundColor -NoNewline:$NoNewline
     }
   }
   function Write-LogError {
@@ -246,10 +279,10 @@ begin {
       [String] $FilePrefix
     )
     begin {
-      $logTime= $(Get-Date -uformat "%Y-%m-%d-%H-%M-%S")
+      $logTime = $(Get-Date -uformat "%Y-%m-%d-%H-%M-%S")
       $logFileName = "$FilePrefix.$logTime.error.log"
     }
-    process{
+    process {
       if ($ErrorText) {
         $ProcessError | Out-File $(Join-Path "$BackupDest" "$logFileName")
       }
@@ -263,11 +296,11 @@ begin {
     )
     Push-Location $Path | Out-Null
     Find-Files $Path $DoNotBackupDirFileName -MatchFullName -UseEverything |  
-      ForEach-Object { $(Resolve-Path -Relative $_.Directory) -replace "^\.\\", "" }     
+    ForEach-Object { $(Resolve-Path -Relative $_.Directory) -replace "^\.\\", "" }     
     Pop-Location | Out-Null
   }
 
-# PSModulePath should be set!
+  # PSModulePath should be set!
   Import-Module Get-DirectoryStats -Force
   Import-Module Find-Everything -Force
 
@@ -293,15 +326,6 @@ process {
   if ($ParamSetName -eq "Home") {
     Save-ChocoBackup -BackupPath  $(Join-Path $BackupDest "Restore-ChocoInstallBackup.ps1")
 
-    # $ExclDirs = @(
-    #   "downloads"
-    #   "vimfiles"
-    #   ".vim\plugged"
-    #   ".cache"
-    # )
-
-    $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
-
     $ExclAllDirs = @(
       # ".git" 
       ".tmp.drivedownload" 
@@ -310,24 +334,39 @@ process {
     $ExclFiles = @( "*.driveupload" )
   }
 
+  $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
+
   $what = @("/MIR")
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
   ########################
   #       ROBOCOPY       #
   ########################
-  .\Copy-WithRobocopy -SrcPath $BackupSrc -DestPath "$(Join-Path $BackupDest "home")" -What $what -Options $options `
-    -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+  $targetLeaf=$(Get-Item $BackupSrc) -replace "\\","_"
+  $targetLeaf=$targetLeaf -replace ":","!"
+  $robocopyDestPath =  "$(Join-Path $BackupDest $targetLeaf)"
 
-  .\Get-InstalledPrograms | Out-File -FilePath $(Join-Path $BackupDest "InstalledPrograms.txt") 
+  .\Copy-WithRobocopy -SrcPath $BackupSrc -DestPath $robocopyDestPath -What $what -Options $options `
+    -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+    
+  Remove-Item "$BackupDest\robocopy.OK.*" 
+  $robocopyLog =  $(Get-ChildItem $robocopyDestPath -Filter "robocopy*")
+  Move-Item $robocopyLog.FullName $BackupDest 
+
+  Write-Log $LogFile "Robocopy ended. See $robocopyLog for details" -ForegroundColor Green
+
+  Write-Log $LogFile "Collect installed programs from registry." -ForegroundColor Green
+  $installs = $(Join-Path $BackupDest "InstalledPrograms.txt") 
+  .\Get-InstalledPrograms | Out-File -FilePath $installs
+  Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
 }
 
 end {
   $backupSize = $(Get-ByteSize -Size  $(Get-DirectoryStats -Directory $BackupDest -Recurse).Size)
-  Write-Host "Backup updated in " -ForegroundColor Green -NoNewline
-  Write-Host "$BackupDest " -ForegroundColor Blue -NoNewline
-  Write-Host "successfully. Its size is " -ForegroundColor Green -NoNewline
-  Write-Host "$backupSize" -ForegroundColor Yellow 
+  Write-Log $LogFile "`r`nBackup updated in " -ForegroundColor Green -NoNewline
+  Write-Log $LogFile "$BackupDest " -ForegroundColor Blue -NoNewline
+  Write-Log $LogFile "successfully. Its size is " -ForegroundColor Green -NoNewline
+  Write-Log $LogFile "$backupSize" -ForegroundColor Yellow 
   if ($WaitInTheEnd) {
     Read-Host "Press enter to exit"
   }

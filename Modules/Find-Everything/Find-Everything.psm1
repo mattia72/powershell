@@ -1,9 +1,14 @@
 function Find-WithEverything {
   [CmdletBinding()]
   param (
-    [Parameter()]
+    [Parameter(Position = 0, Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "File name or pattern to search for files")]
     [string] $SearchPattern,
+    [Parameter(Position = 1, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "Only full name of the file will be matched.")]
     [switch] $MatchFullName,
+    [Parameter(Position = 2, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "Use regular expression")]
     [switch] $UseRegex
   )
 
@@ -32,10 +37,16 @@ function Find-Files {
       HelpMessage = "Source path directory")]
     [string] $Path,
     [Parameter(Position = 1, Mandatory = $true, ValueFromPipelineByPropertyName = $true, 
-      HelpMessage = "File name or part of file name, wildcards are not supported")]
+      HelpMessage = "File name or pattern to search for files")]
     [string] $SearchPattern,
+    [Parameter(Position = 2, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "Only full name of the file will be matched.")]
     [switch] $MatchFullName,
+    [Parameter(Position = 3, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "Use regular expression")]
     [switch] $UseRegex,
+    [Parameter(Position = 4, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+      HelpMessage = "Use everything for search")]
     [switch] $UseEverything
   )
   

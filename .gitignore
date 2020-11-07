@@ -1,1 +1,3 @@
 tempCodeRunnerFile.ps1
+PS2EXE/*.*
+.ROBOCOPY-logs/robocopy.*log
