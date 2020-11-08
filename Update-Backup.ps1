@@ -257,7 +257,10 @@ begin {
       [ConsoleColor] $ForegroundColor,
       [Parameter(Position = 4, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
         HelpMessage = "No new line after entry")]
-      [switch] $NoNewline
+      [switch] $NoNewline,
+      [Parameter(Position = 5, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
+        HelpMessage = "Log won't appear on console, only in logfile")]
+      [switch] $FileOnly
     )
     begin {
       if ($LogFileName.Length -eq 0) {
@@ -269,7 +272,9 @@ begin {
       if ($Text) {
         $Text | Out-File $(Join-Path "$BackupDest" "$LogFileName") -Append
       }
-      Write-Host $Text -ForegroundColor $ForegroundColor -NoNewline:$NoNewline
+      if (-not $FileOnly) {
+        Write-Host $Text -ForegroundColor $ForegroundColor -NoNewline:$NoNewline
+      }
     }
   }
   function Write-LogError {
@@ -280,11 +285,12 @@ begin {
     )
     begin {
       $logTime = $(Get-Date -uformat "%Y-%m-%d-%H-%M-%S")
-      $logFileName = "$FilePrefix.$logTime.error.log"
+      $errorLogFileName = "$FilePrefix.$logTime.error.log"
     }
     process {
       if ($ErrorText) {
-        $ProcessError | Out-File $(Join-Path "$BackupDest" "$logFileName")
+        $ErrorText | Out-File $(Join-Path "$BackupDest" "$errorLogFileName")
+        Write-Log -LogFileName $Logfile -Text $ErrorText -FileOnly
       }
     }
   }
@@ -322,6 +328,11 @@ process {
   .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "OptimizeGetRepo"
 
+  Write-Log $LogFile "Collect installed programs from registry." -ForegroundColor Green
+  $installs = $(Join-Path $BackupDest "InstalledPrograms.txt") 
+  .\Get-InstalledPrograms | Out-File -FilePath $installs
+  Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
+
   #Only at home
   if ($ParamSetName -eq "Home") {
     Save-ChocoBackup -BackupPath  $(Join-Path $BackupDest "Restore-ChocoInstallBackup.ps1")
@@ -331,6 +342,7 @@ process {
       ".tmp.drivedownload" 
       "*.vimview"
     )
+
     $ExclFiles = @( "*.driveupload" )
   }
 
@@ -355,10 +367,6 @@ process {
 
   Write-Log $LogFile "Robocopy ended. See $robocopyLog for details" -ForegroundColor Green
 
-  Write-Log $LogFile "Collect installed programs from registry." -ForegroundColor Green
-  $installs = $(Join-Path $BackupDest "InstalledPrograms.txt") 
-  .\Get-InstalledPrograms | Out-File -FilePath $installs
-  Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
 }
 
 end {
