@@ -328,9 +328,9 @@ process {
   .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "OptimizeGetRepo"
 
-  Write-Log $LogFile "Collect installed programs from registry." -ForegroundColor Green
   $installs = $(Join-Path $BackupDest "InstalledPrograms.txt") 
-  .\Get-InstalledPrograms | Out-File -FilePath $installs
+  .\Get-InstalledPrograms | Out-File -FilePath $installs -ErrorAction Stop -ErrorVariable ProcessError
+  Write-LogError -ErrorText $ProcessError -FilePrefix "CollectInstalledPrograms"
   Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
 
   #Only at home
