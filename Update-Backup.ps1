@@ -346,14 +346,12 @@ process {
     $ExclFiles = @( "*.driveupload" )
   }
 
+  #       ROBOCOPY       #
   $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
 
   $what = @("/MIR")
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
-  ########################
-  #       ROBOCOPY       #
-  ########################
   $targetLeaf=$(Get-Item $BackupSrc) -replace "\\","_"
   $targetLeaf=$targetLeaf -replace ":","!"
   $robocopyDestPath =  "$(Join-Path $BackupDest $targetLeaf)"
