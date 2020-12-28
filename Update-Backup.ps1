@@ -6,8 +6,6 @@ param (
   [switch] $SetWorkParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Marktsoft")]
   [switch] $SetMarktsoftParams,
-  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User", HelpMessage = "Source directory of the backup")]
-  [string] $BackupSrc,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User", HelpMessage = "Source directory or file list of the backup")]
   [hashtable[]] $BackupSrcList,
   [parameter(Position = 1, Mandatory = $false, ParameterSetName = "User")]
@@ -28,8 +26,6 @@ begin {
   $ParamSetName = $PSCmdlet.ParameterSetName
   switch ($ParamSetName) {
     Home {  
-      $BackupSrc = "$env:HOME" 
-
       $BackupSrcList = @{}
       $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
       $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
@@ -59,10 +55,10 @@ begin {
         "MYVIMRC")
     }
     Marktsoft {  
-      $BackupSrc = "$env:HOME" 
       $BackupSrcList = @{}
       $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
       $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
       $BackupDest = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
       $EnvVarsToBackup = (
         "EDITOR",
@@ -87,10 +83,10 @@ begin {
         "MYVIMRC")
     }
     Work {  
-      $BackupSrc = "$env:HOME" 
       $BackupSrcList = @{}
       $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
       $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
       $BackupDest = "s:\Backup_All\"
       $EnvVarsToBackup = (
         "AG32TEST",
