@@ -6,8 +6,8 @@ param (
   [switch] $SetWorkParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Marktsoft")]
   [switch] $SetMarktsoftParams,
-  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User", HelpMessage = "Source directory of the backup")]
-  [string] $BackupSrc,
+  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "User", HelpMessage = "Source directory or file list of the backup")]
+  [hashtable[]] $BackupSrcList,
   [parameter(Position = 1, Mandatory = $false, ParameterSetName = "User")]
   [string] $BackupDest = $(Get-Location).Path,
   [parameter(Position = 2, Mandatory = $false, ParameterSetName = "User")]
@@ -26,7 +26,11 @@ begin {
   $ParamSetName = $PSCmdlet.ParameterSetName
   switch ($ParamSetName) {
     Home {  
-      $BackupSrc = "$env:HOME" 
+      $BackupSrcList = @{}
+      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
+      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
+
       $BackupDest = "$env:USERPROFILE\Box Sync\backup"
       $EnvVarsToBackup = (
         "EDITOR",
@@ -51,7 +55,10 @@ begin {
         "MYVIMRC")
     }
     Marktsoft {  
-      $BackupSrc = "$env:HOME" 
+      $BackupSrcList = @{}
+      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
+      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
       $BackupDest = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
       $EnvVarsToBackup = (
         "EDITOR",
@@ -76,7 +83,10 @@ begin {
         "MYVIMRC")
     }
     Work {  
-      $BackupSrc = "$env:HOME" 
+      $BackupSrcList = @{}
+      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
+      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
       $BackupDest = "s:\Backup_All\"
       $EnvVarsToBackup = (
         "AG32TEST",
@@ -346,25 +356,42 @@ process {
     $ExclFiles = @( "*.driveupload" )
   }
 
-  #       ROBOCOPY       #
-  $ExclDirs = Find-ExcludeDirs -Path $BackupSrc $DoNotBackupDirFileName
-
-  $what = @("/MIR")
   $options = @("/ETA", "/Z", "/NFL", "/NDL")
 
-  $targetLeaf=$(Get-Item $BackupSrc) -replace "\\","_"
-  $targetLeaf=$targetLeaf -replace ":","!"
-  $robocopyDestPath =  "$(Join-Path $BackupDest $targetLeaf)"
+  ########################
+  #       ROBOCOPY       #
+  ########################
 
-  .\Copy-WithRobocopy -SrcPath $BackupSrc -DestPath $robocopyDestPath -What $what -Options $options `
-    -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
-    
   Remove-Item "$BackupDest\robocopy.OK.*" 
-  $robocopyLog =  $(Get-ChildItem $robocopyDestPath -Filter "robocopy*")
-  Move-Item $robocopyLog.FullName $BackupDest 
+
+  foreach($key in $BackupSrcList.Keys) {
+    $item = $BackupSrcList[$key]
+    $isDirectory = Test-Path -Path $item -PathType Container
+
+    if($isDirectory) {
+      $ExclDirs = Find-ExcludeDirs -Path $item $DoNotBackupDirFileName
+    }
+
+    $targetLeaf=$(Get-Item $item) -replace "\\","_"
+    $targetLeaf=$targetLeaf -replace ":","!"
+    $robocopyDestPath =  "$(Join-Path $BackupDest $targetLeaf)"
+
+    if($isDirectory) {
+      $what = @("/MIR")
+      .\Copy-WithRobocopy -SrcPath $item -DestPath $robocopyDestPath -What $what -Options $options `
+        -ExcludeDirs $ExclDirs -ExcludeAllDirs $ExclAllDirs -ExcludeFiles $ExclFiles
+    }
+    else {
+      $file = Split-Path $item -leaf
+      $dir = Split-Path $item -parent
+      .\Copy-WithRobocopy -SrcPath $dir -DestPath $robocopyDestPath -What @($file) -Options $options `
+    }
+
+    $robocopyLog =  $(Get-ChildItem $robocopyDestPath -Filter "robocopy*")
+    Move-Item $robocopyLog.FullName $(Join-Path $BackupDest $($robocopyLog.Name -replace 'log$',"${targetLeaf}.log"))
+  }
 
   Write-Log $LogFile "Robocopy ended. See $robocopyLog for details" -ForegroundColor Green
-
 }
 
 end {
