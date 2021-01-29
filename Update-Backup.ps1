@@ -28,7 +28,8 @@ begin {
     Home {  
       $BackupSrcList = @{}
       $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
-      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("VS Code settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
+      $BackupSrcList.Add("VS Code keybindings",          "$env:USERPROFILE\AppData\Roaming\Code\User\keybindings.json")
       $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
 
       $BackupDest = "$env:USERPROFILE\Box Sync\backup"
