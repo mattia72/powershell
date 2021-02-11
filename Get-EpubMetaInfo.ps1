@@ -109,7 +109,7 @@ function Extract-EpubFile( [string] $EpubFileName, [string] $DestinationDirector
 }
 
 function Get-EpubMetaFile( [string] $EpubFileName) {
-    Import-Module -Name $PSScriptRoot\Create-TempFolder -AsCustomObject
+    Import-Module -Name Create-TempFolder -AsCustomObject
     $TempFolder = New-TempFolder
 
     Extract-EpubFile $EpubFileName $TempFolder
