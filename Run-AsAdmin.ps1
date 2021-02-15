@@ -1,5 +1,5 @@
 # Runs given command as Admin in a separate Window
-# Example: RunAsAdmin Write-Host "haho"
+# Example: Run-AsAdmin Write-Host "haho"
 $NewScriptBlock = [scriptblock]::Create(
 "$args
 Read-Host")
