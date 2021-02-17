@@ -2,42 +2,69 @@
   // See https://go.microsoft.com/fwlink/?LinkId=733558
   // for the documentation about the tasks.json format
   "version": "2.0.0",
-  "tasks": [
+  "inputs": [
     {
-      "label": "Run XML translator script",
-      "type": "shell",
-      "command": "powershell",
-      "args": [
-        "-ExecutionPolicy",
-        "Unrestricted",
-        "-NoProfile",
-        "-File",
-        "${file}",
-        "-XmlFilePath",
-        "$env:USERPROFILE\\Downloads\\export_zasob7.xml"
-      ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "problemMatcher": []
+      "id": "ProjectPath",
+      "description": "Path of Actual Project (csproj)",
+      "default": ".\\Modules\\PSPicture\\PSPicture.csproj",
+      "type": "promptString"
     },
     {
-      "label": ".Net Build",
+      "id": "PackageDll",
+      "description": "Package Dll of reference",
+      "default": "System.Drawing.Common",
+      "type": "promptString"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "add package reference",
       "command": "dotnet",
-      "type": "shell",
+      "type": "process",
       "args": [
-          "build",
-          // Ask dotnet build to generate full paths for file names.
-          "/property:GenerateFullPaths=true",
-          // Do not generate summary otherwise it leads to duplicate errors in Problems panel
-          "/consoleloggerparameters:NoSummary"
+        "add",
+        "${input:ProjectPath}",
+        "package",
+        "${input:PackageDll}"
       ],
-      "group": "build",
-      "presentation": {
-          "reveal": "silent"
-      },
       "problemMatcher": "$msCompile"
-  }
+    },
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${input:ProjectPath}",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "publish",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "publish",
+        "${input:ProjectPath}",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "watch",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "watch",
+        "run",
+        "${input:ProjectPath}",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "problemMatcher": "$msCompile"
+    }
   ]
 }

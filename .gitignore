@@ -1,3 +1,6 @@
 tempCodeRunnerFile.ps1
 PS2EXE/*.*
 .ROBOCOPY-logs/robocopy.*log
+Ionic.Zip.dll
+debug.log
+Modules/PSPicture/obj/*
