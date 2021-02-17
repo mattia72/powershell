@@ -4,3 +4,4 @@ PS2EXE/*.*
 Ionic.Zip.dll
 debug.log
 Modules/PSPicture/obj/*
+Modules/PSPicture/bin/*
