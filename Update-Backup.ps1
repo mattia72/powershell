@@ -1,8 +1,8 @@
 [CmdletBinding(DefaultParameterSetName = "User")]
 param (
-  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Home")]
+  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "HomeToBox")]
   [switch] $SetHomeParams,
-  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Work")]
+  [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Agenda")]
   [switch] $SetWorkParams,
   [parameter(Position = 0, Mandatory = $false, ParameterSetName = "Marktsoft")]
   [switch] $SetMarktsoftParams,
@@ -12,6 +12,11 @@ param (
   [string] $BackupDest = $(Get-Location).Path,
   [parameter(Position = 2, Mandatory = $false, ParameterSetName = "User")]
   [string[]] $EnvVarsToBackup,
+  [parameter(Position = 3, Mandatory = $false, ParameterSetName = "User")]
+  [parameter(Position = 1, Mandatory = $false, ParameterSetName = "HomeToBox")]
+  [parameter(Position = 1, Mandatory = $false, ParameterSetName = "Agenda")]
+  [parameter(Position = 1, Mandatory = $false, ParameterSetName = "Marktsoft")]
+  [switch] $SkipOptimizeGitRepos,
   [switch] $WaitInTheEnd
 )
 
@@ -22,17 +27,21 @@ begin {
 
  # $LogFile = "Backup_$(Get-Date -uformat "%Y-%m-%d-%H-%M-%S").log"
   $LogFile = "backup.log"
-
   $ParamSetName = $PSCmdlet.ParameterSetName
   switch ($ParamSetName) {
-    Home {  
-      $BackupSrcList = @{}
-      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
-      $BackupSrcList.Add("VS Code settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
-      $BackupSrcList.Add("VS Code keybindings",          "$env:USERPROFILE\AppData\Roaming\Code\User\keybindings.json")
-      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
+    {($_ -in "HomeToBox", "Marktsoft", "Agenda")} {  
 
-      $BackupDest = "$env:USERPROFILE\Box Sync\backup"
+      if(-not $SkipOptimizeGitRepos.IsPresent) {
+        $SkipOptimizeGitRepos = $false
+      }
+
+      $BackupSrcList = @{
+        "Windows Terminal Settings"= "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json";
+        "VS Code Settings"         = "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json";
+        "VS Code keybindings"      ="$env:USERPROFILE\AppData\Roaming\Code\User\keybindings.json";
+        "$env:HOME"                = "$env:HOME"
+      }
+
       $EnvVarsToBackup = (
         "EDITOR",
         "HOME",
@@ -54,47 +63,21 @@ begin {
         "PSModulePath",
         "ChocolateyToolsLocation", 
         "MYVIMRC")
+    }
+    HomeToBox {
+      $BackupDest = "$env:USERPROFILE\Box Sync\backup"
     }
     Marktsoft {  
-      $BackupSrcList = @{}
-      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
-      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
-      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
       $BackupDest = "$env:USERPROFILE\OneDrive - Marktsoft Kft\backup"
-      $EnvVarsToBackup = (
-        "EDITOR",
-        "HOME",
-        "MSYSHOME",
-        "MSYSROOT",
-        "MYEDITOR",
-        "MYVIMRC",
-        "PUTTYPATH",
-        "TEMP",
-        "TMP",
-        "VIMPATH",
-        "NVIMPATH",
-        "WIX",
-        "XDG_CONFIG_HOME",
-        "XDG_DATA_HOME",
-        "CLINK_DIR",
-        # "CLINK_ROOT",
-        "CLINK_PROFILE",
-        "PSModulePath",
-        "ChocolateyToolsLocation", 
-        "MYVIMRC")
     }
-    Work {  
-      $BackupSrcList = @{}
-      $BackupSrcList.Add("Windows Terminal Settings", "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json")
-      $BackupSrcList.Add("VS Code Settings",          "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json")
-      $BackupSrcList.Add("$env:HOME",                 "$env:HOME")
+    Agenda {  
       $BackupDest = "s:\Backup_All\"
       $EnvVarsToBackup = (
         "AG32TEST",
         "AG32UNITTEST",
         "AGRTM",
         "AGSRC",
-        #"EDITOR",
+        "EDITOR",
         "HOME",
         # "MSYSHOME",
         # "MSYSROOT",
@@ -265,7 +248,7 @@ begin {
       [string] $Text,
       [Parameter(Position = 3, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
         HelpMessage = "Foreground color of text on console")]
-      [ConsoleColor] $ForegroundColor,
+      [ConsoleColor] $ForegroundColor = [ConsoleColor]::White,
       [Parameter(Position = 4, Mandatory = $false, ValueFromPipelineByPropertyName = $true, 
         HelpMessage = "No new line after entry")]
       [switch] $NoNewline,
@@ -281,10 +264,11 @@ begin {
     }
     process {
       if ($Text) {
-        $Text | Out-File $(Join-Path "$BackupDest" "$LogFileName") -Append
+        $TimedText = "$(Get-Date -uformat "%Y-%m-%d %H:%M:%S") $Text" 
+        $TimedText | Out-File $(Join-Path "$BackupDest" "$LogFileName") -Append
       }
       if (-not $FileOnly) {
-        Write-Host $Text -ForegroundColor $ForegroundColor -NoNewline:$NoNewline
+        Write-Host $TimedText -ForegroundColor $ForegroundColor -NoNewline:$NoNewline
       }
     }
   }
@@ -300,7 +284,8 @@ begin {
     }
     process {
       if ($ErrorText) {
-        $ErrorText | Out-File $(Join-Path "$BackupDest" "$errorLogFileName")
+        $TimedText = "$(Get-Date -uformat "%Y-%m-%d %H:%M:%S") $ErrorText" 
+        $TimedText | Out-File $(Join-Path "$BackupDest" "$errorLogFileName")
         Write-Log -LogFileName $Logfile -Text $ErrorText -FileOnly
       }
     }
@@ -321,6 +306,8 @@ begin {
   Import-Module Get-DirectoryStats -Force
   Import-Module Find-Everything -Force
 
+  Write-Log $LogFile "$ParamSetName backup started."
+
 }
 process {
   # $ErrorActionPreference = "Stop"
@@ -336,16 +323,21 @@ process {
   Save-ScheduledTasks -BackupPath  $(Join-Path $BackupDest "Restore-ScheduledTasks.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "ScheduledTaskBackup"
 
-  .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
-  Write-LogError -ErrorText $ProcessError -FilePrefix "OptimizeGetRepo"
+  if (-not $SkipOptimizeGitRepos) {
+    .\Optimize-GitRepo -Path "$env:HOME" -Recurse -WriteSummary -ErrorAction Stop -ErrorVariable ProcessError;
+    Write-LogError -ErrorText $ProcessError -FilePrefix "OptimizeGetRepo"
+  }
+  else {
+    Write-Log $LogFile "Optimizing Git Repos are skipped!" -ForegroundColor Yellow
+  }
 
   $installs = $(Join-Path $BackupDest "InstalledPrograms.txt") 
   .\Get-InstalledPrograms | Out-File -FilePath $installs -ErrorAction Stop -ErrorVariable ProcessError
   Write-LogError -ErrorText $ProcessError -FilePrefix "CollectInstalledPrograms"
   Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
 
-  #Only at home
-  if ($ParamSetName -eq "Home") {
+  #Only at home and Marktsoft
+  if ($ParamSetName -ne "Work") {
     Save-ChocoBackup -BackupPath  $(Join-Path $BackupDest "Restore-ChocoInstallBackup.ps1")
 
     $ExclAllDirs = @(
@@ -366,7 +358,13 @@ process {
   Remove-Item "$BackupDest\robocopy.OK.*" 
 
   foreach($key in $BackupSrcList.Keys) {
-    $item = $BackupSrcList[$key]
+    $item = $BackupSrcList."$key"
+    if ($null -eq $item) {
+      Write-Error "'$key' has no value in BackupSrcList?"
+      $BackupSrcList
+      $BackupSrcList | Get-Member
+      continue
+    }
     $isDirectory = Test-Path -Path $item -PathType Container
 
     if($isDirectory) {
@@ -401,6 +399,7 @@ end {
   Write-Log $LogFile "$BackupDest " -ForegroundColor Blue -NoNewline
   Write-Log $LogFile "successfully. Its size is " -ForegroundColor Green -NoNewline
   Write-Log $LogFile "$backupSize" -ForegroundColor Yellow 
+  Write-Log $LogFile "$ParamSetName backup ended."
   if ($WaitInTheEnd) {
     Read-Host "Press enter to exit"
   }
