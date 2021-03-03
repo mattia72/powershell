@@ -6,7 +6,7 @@
     {
       "id": "ProjectPath",
       "description": "Path of Actual Project (csproj)",
-      "default": ".\\Modules\\PSPicture\\PSPicture.csproj",
+      "default": "Modules\\PSTrayMenu\\PSTrayMenu.csproj",
       "type": "promptString"
     },
     {
