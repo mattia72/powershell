@@ -38,8 +38,12 @@ begin {
       $BackupSrcList = @{
         "Windows Terminal Settings"= "$env:USERPROFILE\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json";
         "VS Code Settings"         = "$env:USERPROFILE\AppData\Roaming\Code\User\settings.json";
-        "VS Code keybindings"      ="$env:USERPROFILE\AppData\Roaming\Code\User\keybindings.json";
+        "VS Code Keybindings"      ="$env:USERPROFILE\AppData\Roaming\Code\User\keybindings.json";
         "$env:HOME"                = "$env:HOME"
+      }
+      
+      $RegistryBackupSrcList =@{
+        "TotalCommander.reg" = "HKLM\SOFTWARE\Ghistler"
       }
 
       $EnvVarsToBackup = (
@@ -311,6 +315,7 @@ begin {
 }
 process {
   # $ErrorActionPreference = "Stop"
+  # TODO create in tmp dir then robocopy
   $EnvVarsToBackup | Save-EnvVarsBackup -BackupPath $(Join-Path $BackupDest "Restore-EnvVarsBackup.ps1") -ErrorAction Stop -ErrorVariable ProcessError;
   Write-LogError -ErrorText $ProcessError -FilePrefix "EnvVarsBackup"
 
@@ -335,6 +340,14 @@ process {
   .\Get-InstalledPrograms | Out-File -FilePath $installs -ErrorAction Stop -ErrorVariable ProcessError
   Write-LogError -ErrorText $ProcessError -FilePrefix "CollectInstalledPrograms"
   Write-Log $LogFile "Installed Programs are saved to $installs" -ForegroundColor Green
+
+  if ($false) {
+    $RegExportFilesAndKeys = @{}
+    foreach ($key in $RegistryBackupSrcList.Keys) {
+      $RegExportFilesAndKeys[$(Join-Path $BackupDest "$key")] = $RegistryBackupSrcList."$key" 
+    }
+    .\Update-RegistryBackup -BackupRegFileKeyHash $RegExportFilesAndKeys
+  }
 
   #Only at home and Marktsoft
   if ($ParamSetName -ne "Work") {
