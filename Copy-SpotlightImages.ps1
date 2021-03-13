@@ -15,8 +15,12 @@ if (!(Test-Path -Path $To)) {
 }
 
 Copy-Images -Source $From -Destination $To -NewExtension "jpg" -FilterWidth 1920 -Verbose
-Copy-Images -Source $FromBing -Destination $To -NewExtension "jpg" -FilterWidth 1920 -Verbose
 
+$imgFiles = Get-ImageFiles -Path $FromBing  -FilterWidth 1920 
+foreach ($imgFile in $imgFiles) {
+  $destFile = Join-Path $To "$($imgFile.BaseName)_$($imgFile.DateCreated.ToString('yyyyMMddhhmmss')).jpg"
+  Copy-Item -Path $imgFile.FullName -Destination $destFile
+}
 
 $imageDirStat = $(Get-DirectoryStats -Directory $To)
 Write-Host "$To Count: $($imageDirStat.Count) Size: $(Get-ByteSize $($imageDirStat.Size))"

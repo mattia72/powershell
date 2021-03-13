@@ -128,19 +128,14 @@ function Copy-Images()
 
     Write-Progress -Activity "Copying file" -status "$Source -> $Destination" -PercentComplete 0
     $i = 1;
-    foreach ($imgFile in $imgFiles)
-    {
-
+    foreach ($imgFile in $imgFiles) {
         $destFile = Join-Path $Destination "$($imgFile.BaseName).$NewExtension"
         Write-Progress -Activity "Copying file" -status "$destFile" -PercentComplete ([int](100 * $i / $imgFiles.Count))
         Copy-Item -Path $imgFile.FullName -Destination $destFile
         Write-Verbose "Copy image $($imgFile.Name) [$($imgFile.Width)x$($imgFile.Height)] -> $destFile"
-
         $i = $i + 1;
     }
-
     Write-Progress -Activity "Copying file" -Status "Ready" -Completed
-
 }
 
-Export-ModuleMember -Function Copy-Images, Get-ItemsOlderThan
+Export-ModuleMember -Function Copy-Images, Get-ItemsOlderThan, Get-ImageFiles
